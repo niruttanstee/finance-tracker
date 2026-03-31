@@ -4,9 +4,10 @@ import { db } from '@/lib/db';
 import { transactions } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 
-function extractMerchant(description: string): string {
+function extractMerchant(description: string | null | undefined): string {
   // Try to extract merchant name from Wise description
   // Format is usually: "CARD_TRANSACTION from MERCHANT_NAME"
+  if (!description) return 'Unknown';
   const match = description.match(/from\s+(.+?)(?:\s+on\s+|\s*$)/i);
   return match ? match[1].trim() : description;
 }
