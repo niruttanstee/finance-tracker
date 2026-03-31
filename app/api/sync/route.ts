@@ -17,7 +17,7 @@ function parseStatementTransaction(
     transactionId: string;
     type: string;
     date: string;
-    description: string;
+    description: string | null | undefined;
     amount: number;
     currency: string;
   },
@@ -35,13 +35,14 @@ function parseStatementTransaction(
   updatedAt: Date;
 } {
   const isDebit = transaction.amount < 0;
+  const description = transaction.description || `Transaction`;
   
   return {
     id: transaction.transactionId,
     profileId: profileId,
     date: new Date(transaction.date),
-    description: transaction.description,
-    merchant: extractMerchant(transaction.description),
+    description: description,
+    merchant: extractMerchant(description),
     amount: Math.abs(transaction.amount),
     currency: transaction.currency,
     type: isDebit ? 'DEBIT' : 'CREDIT',
