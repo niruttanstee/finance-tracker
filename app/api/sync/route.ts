@@ -35,7 +35,12 @@ function parseStatementTransaction(
   updatedAt: Date;
 } {
   const isDebit = transaction.amount < 0;
-  const description = transaction.description || `Transaction`;
+  // Use transaction type as fallback, format it nicely (e.g., "CARD_TRANSACTION" -> "Card Transaction")
+  const typeLabel = transaction.type
+    ?.replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, l => l.toUpperCase()) || 'Transaction';
+  const description = transaction.description || typeLabel;
   
   return {
     id: transaction.transactionId,
