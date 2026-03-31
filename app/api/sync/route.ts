@@ -20,6 +20,7 @@ function parseStatementTransaction(
     description: string | null | undefined;
     amount: number;
     currency: string;
+    merchant?: string | null;
   },
   profileId: number
 ): {
@@ -41,13 +42,14 @@ function parseStatementTransaction(
     .toLowerCase()
     .replace(/\b\w/g, l => l.toUpperCase()) || 'Transaction';
   const description = transaction.description || typeLabel;
+  const merchant = transaction.merchant || extractMerchant(description, typeLabel);
   
   return {
     id: transaction.transactionId,
     profileId: profileId,
     date: new Date(transaction.date),
     description: description,
-    merchant: extractMerchant(description, typeLabel),
+    merchant: merchant,
     amount: Math.abs(transaction.amount),
     currency: transaction.currency,
     type: isDebit ? 'DEBIT' : 'CREDIT',

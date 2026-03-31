@@ -28,6 +28,17 @@ export interface WiseProfile {
   };
 }
 
+export interface WiseStatementTransaction {
+  transactionId: string;
+  type: string;
+  date: string;
+  description: string;
+  amount: number;
+  currency: string;
+  runningBalance: number;
+  merchant?: string;
+}
+
 export class WiseClient {
   private token: string;
 
@@ -66,15 +77,7 @@ export class WiseClient {
     balanceId: number,
     since?: Date,
     until?: Date
-  ): Promise<Array<{
-    transactionId: string;
-    type: string;
-    date: string;
-    description: string;
-    amount: number;
-    currency: string;
-    runningBalance: number;
-  }>> {
+  ): Promise<WiseStatementTransaction[]> {
     const params = new URLSearchParams();
     if (since) params.append('intervalStart', since.toISOString());
     if (until) params.append('intervalEnd', until.toISOString());
@@ -87,6 +90,13 @@ export class WiseClient {
         description: string;
         amount: { value: number; currency: string };
         runningBalance: { value: number; currency: string };
+        details?: {
+          type?: string;
+          description?: string;
+          merchant?: {
+            name?: string;
+          };
+        };
       }>;
     }>(`/v1/profiles/${profileId}/balance-statements/${balanceId}/statement.json?${params.toString()}`);
 
@@ -94,10 +104,11 @@ export class WiseClient {
       transactionId: t.transactionId,
       type: t.type,
       date: t.date,
-      description: t.description,
+      description: t.description || t.details?.description || '',
       amount: t.amount.value,
       currency: t.amount.currency,
       runningBalance: t.runningBalance.value,
+      merchant: t.details?.merchant?.name,
     }));
   }
 }
