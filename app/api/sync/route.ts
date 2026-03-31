@@ -45,11 +45,20 @@ export async function POST() {
     
     // Get personal profile
     const profiles = await client.getProfiles();
-    const personalProfile = profiles.find(p => p.type === 'personal');
+    console.log('Profiles returned:', JSON.stringify(profiles, null, 2));
+    
+    // Try to find personal profile, fallback to any profile
+    let personalProfile = profiles.find(p => p.type?.toLowerCase() === 'personal');
+    
+    if (!personalProfile && profiles.length > 0) {
+      // Use first available profile if no personal one found
+      personalProfile = profiles[0];
+      console.log('Using first available profile:', personalProfile.id);
+    }
     
     if (!personalProfile) {
       return NextResponse.json(
-        { error: 'No personal profile found' },
+        { error: 'No profile found. Check your API token has correct permissions.' },
         { status: 404 }
       );
     }
