@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Finance Tracker
 
-## Getting Started
+Personal finance tracker using the Wise API to sync and visualize transaction data.
 
-First, run the development server:
+## Features
+
+- Sync transactions from Wise API
+- Monthly spending trends (line chart)
+- Category breakdown (pie chart)
+- Manual transaction categorization
+- Local SQLite database (data persists)
+- Responsive design
+
+## Setup
+
+1. **Clone and install**
+   ```bash
+   git clone <repo-url>
+   cd finance-tracker
+   npm install
+   ```
+
+2. **Configure Wise API**
+   - Get your Personal API Token from Wise: Settings → API tokens
+   - Create `.env.local`:
+     ```
+     WISE_API_TOKEN=your_token_here
+     ```
+
+3. **Initialize database**
+   ```bash
+   npm run db:init
+   ```
+
+4. **Run development server**
+   ```bash
+   npm run dev
+   ```
+   Open http://localhost:3000
+
+## Usage
+
+1. Click "Sync with Wise" to fetch your transactions
+2. Navigate to Transactions to categorize them
+3. View your spending breakdown on the Dashboard
+
+## Building for Production
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Output will be in `dist/` directory.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Tech Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Next.js 14
+- TypeScript
+- SQLite (better-sqlite3)
+- Drizzle ORM
+- Shadcn UI
+- Recharts
