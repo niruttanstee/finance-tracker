@@ -4,12 +4,12 @@ import { db } from '@/lib/db';
 import { transactions } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 
-function extractMerchant(description: string | null | undefined): string {
+function extractMerchant(description: string | null | undefined, typeLabel: string): string {
   // Try to extract merchant name from Wise description
   // Format is usually: "CARD_TRANSACTION from MERCHANT_NAME"
-  if (!description) return 'Unknown';
+  if (!description) return typeLabel;
   const match = description.match(/from\s+(.+?)(?:\s+on\s+|\s*$)/i);
-  return match ? match[1].trim() : description;
+  return match ? match[1].trim() : typeLabel;
 }
 
 function parseStatementTransaction(
@@ -47,7 +47,7 @@ function parseStatementTransaction(
     profileId: profileId,
     date: new Date(transaction.date),
     description: description,
-    merchant: extractMerchant(description),
+    merchant: extractMerchant(description, typeLabel),
     amount: Math.abs(transaction.amount),
     currency: transaction.currency,
     type: isDebit ? 'DEBIT' : 'CREDIT',
