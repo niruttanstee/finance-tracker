@@ -57,19 +57,48 @@ export class WiseClient {
     return this.fetch<WiseProfile[]>('/v2/profiles');
   }
 
-  async getActivities(
+  async getBalances(profileId: number): Promise<Array<{ id: number; currency: string; amount: number }>> {
+    return this.fetch<Array<{ id: number; currency: string; amount: number }>>(`/v4/profiles/${profileId}/balances?types=STANDARD`);
+  }
+
+  async getBalanceStatement(
     profileId: number,
+    balanceId: number,
     since?: Date,
     until?: Date
-  ): Promise<WiseActivity[]> {
+  ): Promise<Array<{
+    transactionId: string;
+    type: string;
+    date: string;
+    description: string;
+    amount: number;
+    currency: string;
+    runningBalance: number;
+  }>> {
     const params = new URLSearchParams();
-    if (since) params.append('since', since.toISOString());
-    if (until) params.append('until', until.toISOString());
-    params.append('size', '100');
+    if (since) params.append('intervalStart', since.toISOString());
+    if (until) params.append('intervalEnd', until.toISOString());
 
-    return this.fetch<WiseActivity[]>(
-      `/v3/profiles/${profileId}/activities?${params.toString()}`
-    );
+    const response = await this.fetch<{
+      transactions: Array<{
+        transactionId: string;
+        type: string;
+        date: string;
+        description: string;
+        amount: { value: number; currency: string };
+        runningBalance: { value: number; currency: string };
+      }>;
+    }>(`/v1/profiles/${profileId}/balance-statements/${balanceId}/statement.json?${params.toString()}`);
+
+    return response.transactions.map(t => ({
+      transactionId: t.transactionId,
+      type: t.type,
+      date: t.date,
+      description: t.description,
+      amount: t.amount.value,
+      currency: t.amount.currency,
+      runningBalance: t.runningBalance.value,
+    }));
   }
 }
 

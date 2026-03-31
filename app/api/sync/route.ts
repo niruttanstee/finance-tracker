@@ -11,7 +11,17 @@ function extractMerchant(description: string): string {
   return match ? match[1].trim() : description;
 }
 
-function parseActivity(activity: any): {
+function parseStatementTransaction(
+  transaction: {
+    transactionId: string;
+    type: string;
+    date: string;
+    description: string;
+    amount: number;
+    currency: string;
+  },
+  profileId: number
+): {
   id: string;
   profileId: number;
   date: Date;
@@ -23,16 +33,16 @@ function parseActivity(activity: any): {
   createdAt: Date;
   updatedAt: Date;
 } {
-  const isDebit = activity.primaryAmount < 0;
+  const isDebit = transaction.amount < 0;
   
   return {
-    id: activity.id,
-    profileId: activity.resource.id,
-    date: new Date(activity.createdAt),
-    description: activity.description,
-    merchant: extractMerchant(activity.description),
-    amount: Math.abs(activity.primaryAmount),
-    currency: activity.primaryCurrency,
+    id: transaction.transactionId,
+    profileId: profileId,
+    date: new Date(transaction.date),
+    description: transaction.description,
+    merchant: extractMerchant(transaction.description),
+    amount: Math.abs(transaction.amount),
+    currency: transaction.currency,
     type: isDebit ? 'DEBIT' : 'CREDIT',
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -63,43 +73,73 @@ export async function POST() {
       );
     }
 
-    // Get activities from last year
+    // Get balances for the profile
+    const balances = await client.getBalances(personalProfile.id);
+    console.log('Balances found:', balances.length);
+
+    if (balances.length === 0) {
+      return NextResponse.json(
+        { error: 'No balances found for this profile' },
+        { status: 404 }
+      );
+    }
+
+    // Get transactions from last year
     const oneYearAgo = new Date();
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-    
-    const activities = await client.getActivities(
-      personalProfile.id,
-      oneYearAgo,
-      new Date()
-    );
+
+    let allTransactions: Array<{
+      id: string;
+      profileId: number;
+      date: Date;
+      description: string;
+      merchant: string;
+      amount: number;
+      currency: string;
+      type: 'DEBIT' | 'CREDIT';
+      createdAt: Date;
+      updatedAt: Date;
+    }> = [];
+
+    // Fetch statements for each balance
+    for (const balance of balances) {
+      try {
+        const statementTransactions = await client.getBalanceStatement(
+          personalProfile.id,
+          balance.id,
+          oneYearAgo,
+          new Date()
+        );
+        
+        const parsed = statementTransactions.map(t => 
+          parseStatementTransaction(t, personalProfile.id)
+        );
+        allTransactions = allTransactions.concat(parsed);
+      } catch (error) {
+        console.error(`Error fetching statement for balance ${balance.id}:`, error);
+      }
+    }
 
     let inserted = 0;
     let updated = 0;
 
-    for (const activity of activities) {
-      // Skip non-transaction activities
-      if (!activity.type.includes('CARD') && !activity.type.includes('TRANSFER')) {
-        continue;
-      }
-
-      const data = parseActivity(activity);
-      
+    for (const transaction of allTransactions) {
       // Check if transaction exists
       const existing = await db.query.transactions.findFirst({
-        where: eq(transactions.id, data.id),
+        where: eq(transactions.id, transaction.id),
       });
 
       if (existing) {
         await db.update(transactions)
           .set({
-            ...data,
+            ...transaction,
             category: existing.category, // Preserve existing category
             updatedAt: new Date(),
           })
-          .where(eq(transactions.id, data.id));
+          .where(eq(transactions.id, transaction.id));
         updated++;
       } else {
-        await db.insert(transactions).values(data);
+        await db.insert(transactions).values(transaction);
         inserted++;
       }
     }
@@ -108,7 +148,7 @@ export async function POST() {
       success: true,
       inserted,
       updated,
-      total: activities.length,
+      total: allTransactions.length,
     });
   } catch (error) {
     console.error('Sync error:', error);
