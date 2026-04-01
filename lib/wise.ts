@@ -72,6 +72,18 @@ export class WiseClient {
     return this.fetch<Array<{ id: number; currency: string; amount: number }>>(`/v4/profiles/${profileId}/balances?types=STANDARD`);
   }
 
+  async getExchangeRate(fromCurrency: string, toCurrency: string): Promise<number> {
+    if (fromCurrency === toCurrency) {
+      return 1;
+    }
+    
+    const response = await this.fetch<{
+      rate: number;
+    }>(`/v1/rates?source=${fromCurrency}&target=${toCurrency}`);
+    
+    return response.rate;
+  }
+
   async getBalanceStatement(
     profileId: number,
     balanceId: number,
