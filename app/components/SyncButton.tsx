@@ -37,7 +37,7 @@ export function SyncButton() {
           error: data.error || 'Sync failed',
         });
       }
-    } catch (error) {
+    } catch {
       setResult({
         success: false,
         error: 'Network error. Please try again.',

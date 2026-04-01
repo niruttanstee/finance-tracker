@@ -26,6 +26,30 @@ export async function createCategory(
   return category;
 }
 
+export async function updateCategory(
+  id: string,
+  name: string,
+  color: string
+): Promise<Category> {
+  // Don't update default categories
+  const existingCategory = await getCategoryById(id);
+  if (existingCategory?.isDefault) {
+    throw new Error('Cannot modify default categories');
+  }
+  
+  const [category] = await db
+    .update(categories)
+    .set({ name, color })
+    .where(eq(categories.id, id))
+    .returning();
+  
+  if (!category) {
+    throw new Error('Category not found');
+  }
+  
+  return category;
+}
+
 export async function deleteCategory(id: string): Promise<void> {
   // Don't delete default categories
   const category = await getCategoryById(id);
