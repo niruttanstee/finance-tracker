@@ -73,7 +73,21 @@ async function parseStatementTransaction(
   const sourceCurrency = transaction.currency;
   
   // Convert to MYR
-  const { myrAmount, rate } = await convertToMYR(client, absAmount, sourceCurrency);
+  let myrAmount = absAmount;
+  let rate = 1;
+  
+  if (sourceCurrency !== 'MYR') {
+    try {
+      const conversion = await convertToMYR(client, absAmount, sourceCurrency);
+      myrAmount = conversion.myrAmount;
+      rate = conversion.rate;
+    } catch (error) {
+      console.error(`Failed to convert ${absAmount} ${sourceCurrency} to MYR:`, error);
+      // Fall back to using original amount if conversion fails
+      myrAmount = absAmount;
+      rate = 0;
+    }
+  }
   
   // Generate composite ID from transaction content instead of using Wise transactionId
   // This prevents duplicates when the same transaction appears in multiple balance statements
@@ -124,6 +138,7 @@ export async function POST() {
     // Get balances for the profile
     const balances = await client.getBalances(personalProfile.id);
     console.log('Balances found:', balances.length);
+    console.log('Balance details:', balances.map(b => ({ id: b.id, currency: b.currency, amount: b.amount, type: (b as any).type })));
 
     if (balances.length === 0) {
       return NextResponse.json(
@@ -156,12 +171,14 @@ export async function POST() {
     // Fetch statements for each balance
     for (const balance of balances) {
       try {
+        console.log(`Fetching statement for balance ${balance.id} (${balance.currency})...`);
         const statementTransactions = await client.getBalanceStatement(
           personalProfile.id,
           balance.id,
           oneYearAgo,
           new Date()
         );
+        console.log(`Found ${statementTransactions.length} transactions for balance ${balance.id}`);
         
         const parsed = await Promise.all(
           statementTransactions.map(t => 
@@ -174,27 +191,37 @@ export async function POST() {
       }
     }
 
-    // Deduplicate transactions by wiseId, keeping the best merchant name
+    console.log(`Total transactions before deduplication: ${allTransactions.length}`);
+    
+    // Deduplicate by composite ID (timestamp + merchant + amount + currency)
+    // This handles cases where the same transaction appears in multiple balance statements
     const transactionMap = new Map<string, typeof allTransactions[0]>();
     for (const t of allTransactions) {
-      const existing = transactionMap.get(t.wiseId);
+      const existing = transactionMap.get(t.id);
       if (!existing) {
-        transactionMap.set(t.wiseId, t);
+        transactionMap.set(t.id, t);
       } else {
         // Prefer transaction with better merchant name (not generic fallbacks)
         const isCurrentGeneric = t.merchant === 'Credit' || t.merchant === 'Transaction';
         const isExistingGeneric = existing.merchant === 'Credit' || existing.merchant === 'Transaction';
         if (!isCurrentGeneric && isExistingGeneric) {
-          transactionMap.set(t.wiseId, t);
+          transactionMap.set(t.id, t);
         }
       }
     }
     const deduplicatedTransactions = Array.from(transactionMap.values());
+    console.log(`Transactions after deduplication: ${deduplicatedTransactions.length}`);
 
     let inserted = 0;
     let updated = 0;
 
     for (const transaction of deduplicatedTransactions) {
+      // Validate required fields
+      if (!transaction.amount || isNaN(transaction.amount)) {
+        console.warn(`Skipping transaction with invalid amount: ${transaction.id}`);
+        continue;
+      }
+      
       // Check if transaction exists
       const existing = await db.query.transactions.findFirst({
         where: eq(transactions.id, transaction.id),
@@ -220,6 +247,7 @@ export async function POST() {
       inserted,
       updated,
       total: allTransactions.length,
+      unique: deduplicatedTransactions.length,
     });
   } catch (error) {
     console.error('Sync error:', error);

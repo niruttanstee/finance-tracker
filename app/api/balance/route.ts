@@ -34,7 +34,7 @@ export async function GET() {
     }
 
     return NextResponse.json({
-      balance: Number(myrBalance.amount),
+      balance: Number(myrBalance.amount.value),
       currency: 'MYR',
     });
   } catch (error) {

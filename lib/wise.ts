@@ -39,6 +39,16 @@ export interface WiseStatementTransaction {
   merchant?: string;
 }
 
+export interface WiseBalance {
+  id: number;
+  currency: string;
+  amount: {
+    value: number;
+    currency: string;
+  };
+  type: string;
+}
+
 export class WiseClient {
   private token: string;
 
@@ -68,8 +78,11 @@ export class WiseClient {
     return this.fetch<WiseProfile[]>('/v2/profiles');
   }
 
-  async getBalances(profileId: number): Promise<Array<{ id: number; currency: string; amount: number }>> {
-    return this.fetch<Array<{ id: number; currency: string; amount: number }>>(`/v4/profiles/${profileId}/balances?types=STANDARD`);
+  async getBalances(profileId: number): Promise<WiseBalance[]> {
+    // Note: Wise API requires types parameter. STANDARD includes regular currency accounts.
+    // For SAVINGS/JAR balances, may need separate calls or different API endpoints.
+    const balances = await this.fetch<WiseBalance[]>(`/v4/profiles/${profileId}/balances?types=STANDARD`);
+    return balances;
   }
 
   async getExchangeRate(fromCurrency: string, toCurrency: string): Promise<number> {
