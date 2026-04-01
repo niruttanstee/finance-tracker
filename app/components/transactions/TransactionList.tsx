@@ -25,6 +25,9 @@ type Transaction = {
   description: string;
   amount: number;
   currency: string;
+  originalAmount: number | null;
+  originalCurrency: string | null;
+  exchangeRate: number | null;
   type: 'DEBIT' | 'CREDIT';
   category: string | undefined;
 }
@@ -84,23 +87,25 @@ export function TransactionList({
                       ? 'text-green-600'
                       : 'text-red-600'
                   }
+                  title={transaction.originalCurrency ? 
+                    `${transaction.originalCurrency} ${transaction.originalAmount?.toFixed(2)} @ ${transaction.exchangeRate?.toFixed(4)}` : 
+                    undefined}
                 >
-                  {transaction.type === 'CREDIT' ? '+' : '-'}
-                  {transaction.currency} {transaction.amount.toFixed(2)}
+                  {transaction.type === 'CREDIT' ? '+' : '-'}RM {transaction.amount.toFixed(2)}
                 </TableCell>
                 <TableCell>
                   <Select
                     value={transaction.category || 'uncategorized'}
                     onValueChange={(value) => {
                       const id = transaction.id;
-                      if (id) {
+                      if (id && value) {
                         handleCategoryChange(
-                          id as any, 
+                          id, 
                           value === 'uncategorized' ? undefined : value
                         );
                       }
                     }}
-                    disabled={updating === (transaction.id as string)}
+                    disabled={updating === transaction.id}
                   >
                     <SelectTrigger className="w-[180px]">
                       <SelectValue placeholder="Select category" />
