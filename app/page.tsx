@@ -16,13 +16,19 @@ export default async function DashboardPage() {
   const lastMonthEnd = endOfMonth(subMonths(now, 1));
 
   // Fetch all data in parallel
+  let currentBalance = { balance: 0, currency: 'MYR' };
+  try {
+    currentBalance = await getCurrentBalance();
+  } catch (error) {
+    console.error('Failed to fetch balance:', error);
+  }
+
   const [
     monthlySpending,
     categoryBreakdown,
     uncategorizedCount,
     currentMonthTransactions,
     lastMonthTransactions,
-    currentBalance,
   ] = await Promise.all([
     getMonthlySpending(6),
     getCategoryBreakdown(currentMonthStart, currentMonthEnd),
@@ -37,7 +43,6 @@ export default async function DashboardPage() {
       endDate: lastMonthEnd,
       type: 'DEBIT',
     }),
-    getCurrentBalance(),
   ]);
 
   const currentMonthTotal = currentMonthTransactions.reduce(
@@ -121,7 +126,7 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              RM {currentBalance.balance.toFixed(2)}
+              RM {Number(currentBalance.balance || 0).toFixed(2)}
             </div>
             <p className="text-xs text-muted-foreground">
               Wise MYR account

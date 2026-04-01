@@ -14,10 +14,11 @@ export async function GET() {
     }
     
     if (!personalProfile) {
-      return NextResponse.json(
-        { error: 'No profile found' },
-        { status: 404 }
-      );
+      return NextResponse.json({
+        balance: 0,
+        currency: 'MYR',
+        error: 'No profile found'
+      }, { status: 404 });
     }
 
     // Get balances - filter for MYR only
@@ -33,14 +34,15 @@ export async function GET() {
     }
 
     return NextResponse.json({
-      balance: myrBalance.amount,
+      balance: Number(myrBalance.amount),
       currency: 'MYR',
     });
   } catch (error) {
     console.error('Balance fetch error:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to fetch balance' },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      balance: 0,
+      currency: 'MYR',
+      error: error instanceof Error ? error.message : 'Failed to fetch balance'
+    }, { status: 500 });
   }
 }
