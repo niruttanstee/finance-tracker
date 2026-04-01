@@ -5,6 +5,7 @@ import { SyncButton } from './components/SyncButton';
 import { MonthlySpending } from './components/charts/MonthlySpending';
 import { CategoryBreakdown } from './components/charts/CategoryBreakdown';
 import { getMonthlySpending, getCategoryBreakdown, getUncategorizedCount, getTransactions } from '@/lib/transactions';
+import { getCurrentBalance } from '@/lib/balance';
 import { subMonths, startOfMonth, endOfMonth } from 'date-fns';
 
 export default async function DashboardPage() {
@@ -21,6 +22,7 @@ export default async function DashboardPage() {
     uncategorizedCount,
     currentMonthTransactions,
     lastMonthTransactions,
+    currentBalance,
   ] = await Promise.all([
     getMonthlySpending(6),
     getCategoryBreakdown(currentMonthStart, currentMonthEnd),
@@ -35,6 +37,7 @@ export default async function DashboardPage() {
       endDate: lastMonthEnd,
       type: 'DEBIT',
     }),
+    getCurrentBalance(),
   ]);
 
   const currentMonthTotal = currentMonthTransactions.reduce(
@@ -64,7 +67,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid gap-4 md:grid-cols-3 mb-8">
+      <div className="grid gap-4 md:grid-cols-4 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -107,6 +110,22 @@ export default async function DashboardPage() {
             <Link href="/transactions">
               <Button className="w-full">View All Transactions</Button>
             </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Current Balance
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              RM {currentBalance.balance.toFixed(2)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Wise MYR account
+            </p>
           </CardContent>
         </Card>
       </div>
