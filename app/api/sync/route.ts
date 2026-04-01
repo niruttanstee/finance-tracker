@@ -4,6 +4,13 @@ import { db } from '@/lib/db';
 import { transactions } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 
+function generateCompositeId(date: Date, merchant: string, amount: number, currency: string): string {
+  const timestamp = Math.floor(date.getTime() / 1000);
+  const sanitizedMerchant = merchant.replace(/[^a-zA-Z0-9]/g, '_');
+  const amountStr = amount.toFixed(2).replace('.', '_');
+  return `${timestamp}_${sanitizedMerchant}_${amountStr}_${currency}`;
+}
+
 function extractMerchant(description: string | null | undefined, typeLabel: string): string {
   // Try to extract merchant name from Wise description
   // Format is usually: "CARD_TRANSACTION from MERCHANT_NAME"
@@ -12,7 +19,21 @@ function extractMerchant(description: string | null | undefined, typeLabel: stri
   return match ? match[1].trim() : typeLabel;
 }
 
-function parseStatementTransaction(
+async function convertToMYR(
+  client: ReturnType<typeof createWiseClient>,
+  amount: number,
+  fromCurrency: string
+): Promise<{ myrAmount: number; rate: number }> {
+  if (fromCurrency === 'MYR') {
+    return { myrAmount: amount, rate: 1 };
+  }
+  
+  const rate = await client.getExchangeRate(fromCurrency, 'MYR');
+  return { myrAmount: amount * rate, rate };
+}
+
+async function parseStatementTransaction(
+  client: ReturnType<typeof createWiseClient>,
   transaction: {
     transactionId: string;
     type: string;
@@ -23,18 +44,22 @@ function parseStatementTransaction(
     merchant?: string | null;
   },
   profileId: number
-): {
+): Promise<{
   id: string;
+  wiseId: string;
   profileId: number;
   date: Date;
   description: string;
   merchant: string;
   amount: number;
   currency: string;
+  originalAmount: number | null;
+  originalCurrency: string | null;
+  exchangeRate: number | null;
   type: 'DEBIT' | 'CREDIT';
   createdAt: Date;
   updatedAt: Date;
-} {
+}> {
   const isDebit = transaction.amount < 0;
   // Use transaction type as fallback, format it nicely (e.g., "CARD_TRANSACTION" -> "Card Transaction")
   const typeLabel = transaction.type
@@ -43,15 +68,29 @@ function parseStatementTransaction(
     .replace(/\b\w/g, l => l.toUpperCase()) || 'Transaction';
   const description = transaction.description || typeLabel;
   const merchant = transaction.merchant || extractMerchant(description, typeLabel);
+  const date = new Date(transaction.date);
+  const absAmount = Math.abs(transaction.amount);
+  const sourceCurrency = transaction.currency;
+  
+  // Convert to MYR
+  const { myrAmount, rate } = await convertToMYR(client, absAmount, sourceCurrency);
+  
+  // Generate composite ID from transaction content instead of using Wise transactionId
+  // This prevents duplicates when the same transaction appears in multiple balance statements
+  const compositeId = generateCompositeId(date, merchant, myrAmount, 'MYR');
   
   return {
-    id: transaction.transactionId,
+    id: compositeId,
+    wiseId: transaction.transactionId,
     profileId: profileId,
-    date: new Date(transaction.date),
+    date: date,
     description: description,
     merchant: merchant,
-    amount: Math.abs(transaction.amount),
-    currency: transaction.currency,
+    amount: myrAmount,
+    currency: 'MYR',
+    originalAmount: sourceCurrency === 'MYR' ? null : absAmount,
+    originalCurrency: sourceCurrency === 'MYR' ? null : sourceCurrency,
+    exchangeRate: sourceCurrency === 'MYR' ? null : rate,
     type: isDebit ? 'DEBIT' : 'CREDIT',
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -99,12 +138,16 @@ export async function POST() {
 
     let allTransactions: Array<{
       id: string;
+      wiseId: string;
       profileId: number;
       date: Date;
       description: string;
       merchant: string;
       amount: number;
       currency: string;
+      originalAmount: number | null;
+      originalCurrency: string | null;
+      exchangeRate: number | null;
       type: 'DEBIT' | 'CREDIT';
       createdAt: Date;
       updatedAt: Date;
@@ -120,8 +163,10 @@ export async function POST() {
           new Date()
         );
         
-        const parsed = statementTransactions.map(t => 
-          parseStatementTransaction(t, personalProfile.id)
+        const parsed = await Promise.all(
+          statementTransactions.map(t => 
+            parseStatementTransaction(client, t, personalProfile.id)
+          )
         );
         allTransactions = allTransactions.concat(parsed);
       } catch (error) {
@@ -129,10 +174,27 @@ export async function POST() {
       }
     }
 
+    // Deduplicate transactions by wiseId, keeping the best merchant name
+    const transactionMap = new Map<string, typeof allTransactions[0]>();
+    for (const t of allTransactions) {
+      const existing = transactionMap.get(t.wiseId);
+      if (!existing) {
+        transactionMap.set(t.wiseId, t);
+      } else {
+        // Prefer transaction with better merchant name (not generic fallbacks)
+        const isCurrentGeneric = t.merchant === 'Credit' || t.merchant === 'Transaction';
+        const isExistingGeneric = existing.merchant === 'Credit' || existing.merchant === 'Transaction';
+        if (!isCurrentGeneric && isExistingGeneric) {
+          transactionMap.set(t.wiseId, t);
+        }
+      }
+    }
+    const deduplicatedTransactions = Array.from(transactionMap.values());
+
     let inserted = 0;
     let updated = 0;
 
-    for (const transaction of allTransactions) {
+    for (const transaction of deduplicatedTransactions) {
       // Check if transaction exists
       const existing = await db.query.transactions.findFirst({
         where: eq(transactions.id, transaction.id),
