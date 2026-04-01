@@ -73,7 +73,7 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${currentMonthTotal.toFixed(2)}
+              RM {currentMonthTotal.toFixed(2)}
             </div>
             <p className={`text-xs ${
               percentChange > 0 ? 'text-red-600' : 'text-green-600'

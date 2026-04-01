@@ -32,10 +32,10 @@ export function MonthlySpending({ data }: MonthlySpendingProps) {
           />
           <YAxis 
             tick={{ fontSize: 12 }}
-            tickFormatter={(value) => `$${Number(value).toFixed(0)}`}
+            tickFormatter={(value) => `RM ${Number(value).toFixed(0)}`}
           />
           <Tooltip 
-            formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Spent']}
+            formatter={(value) => [`RM ${Number(value).toFixed(2)}`, 'Spent']}
             labelStyle={{ color: '#000' }}
           />
           <Line

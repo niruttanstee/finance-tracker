@@ -43,7 +43,7 @@ export function CategoryBreakdown({ data }: CategoryBreakdownProps) {
             formatter={(value, name) => {
               const numValue = Number(value);
               const percent = total > 0 ? (numValue / total) * 100 : 0;
-              return [`$${numValue.toFixed(2)} (${percent.toFixed(1)}%)`, name];
+              return [`RM ${numValue.toFixed(2)} (${percent.toFixed(1)}%)`, name];
             }}
           />
           <Legend />
