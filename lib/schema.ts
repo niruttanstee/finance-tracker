@@ -6,8 +6,11 @@ export const transactions = sqliteTable('transactions', {
   date: integer('date', { mode: 'timestamp' }).notNull(),
   description: text('description').notNull(),
   merchant: text('merchant').notNull(),
-  amount: real('amount').notNull(),
-  currency: text('currency', { length: 3 }).notNull(),
+  amount: real('amount').notNull(), // Now always in MYR
+  currency: text('currency', { length: 3 }).notNull().default('MYR'), // Always MYR
+  originalAmount: real('original_amount'), // Amount in source currency
+  originalCurrency: text('original_currency', { length: 3 }), // Source currency code
+  exchangeRate: real('exchange_rate'), // Rate used for conversion
   type: text('type', { enum: ['DEBIT', 'CREDIT'] }).notNull(),
   category: text('category'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
