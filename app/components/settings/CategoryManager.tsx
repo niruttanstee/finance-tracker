@@ -6,19 +6,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Wallet } from 'lucide-react';
 
 interface Category {
   id: string;
   name: string;
   color: string;
   isDefault: boolean;
+  monthlyBudget?: number;
 }
 
 interface CategoryFormData {
   id?: string;
   name: string;
   color: string;
+  monthlyBudget?: number;
 }
 
 export function CategoryManager() {
@@ -26,7 +28,11 @@ export function CategoryManager() {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [formData, setFormData] = useState<CategoryFormData>({ name: '', color: '#3b82f6' });
+  const [formData, setFormData] = useState<CategoryFormData>({ name: '', color: '#3b82f6', monthlyBudget: 0 });
+  const [currentYearMonth, setCurrentYearMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
 
   useEffect(() => {
     fetchCategories();
@@ -34,9 +40,24 @@ export function CategoryManager() {
 
   async function fetchCategories() {
     try {
-      const response = await fetch('/api/categories');
-      const data = await response.json();
-      setCategories(data.data || []);
+      // Fetch categories
+      const catResponse = await fetch('/api/categories');
+      const catData = await catResponse.json();
+      
+      // Fetch budgets for current month
+      const budgetResponse = await fetch(`/api/budgets?yearMonth=${currentYearMonth}`);
+      const budgetData = await budgetResponse.json();
+      const budgetMap = new Map(
+        (budgetData.data || []).map((b: any) => [b.categoryId, b.monthlyLimit])
+      );
+      
+      // Merge budget data
+      const categoriesWithBudgets = (catData.data || []).map((cat: Category) => ({
+        ...cat,
+        monthlyBudget: budgetMap.get(cat.id) || 0,
+      }));
+      
+      setCategories(categoriesWithBudgets);
     } catch (error) {
       console.error('Error fetching categories:', error);
     } finally {
@@ -46,32 +67,57 @@ export function CategoryManager() {
 
   function openAddDialog() {
     setEditingCategory(null);
-    setFormData({ name: '', color: '#3b82f6' });
+    setFormData({ name: '', color: '#3b82f6', monthlyBudget: 0 });
     setIsDialogOpen(true);
   }
 
   function openEditDialog(category: Category) {
     setEditingCategory(category);
-    setFormData({ id: category.id, name: category.name, color: category.color });
+    setFormData({
+      id: category.id,
+      name: category.name,
+      color: category.color,
+      monthlyBudget: category.monthlyBudget || 0,
+    });
     setIsDialogOpen(true);
   }
 
   async function handleSave() {
     try {
       if (editingCategory) {
-        // Update existing
+        // Update category
         const response = await fetch('/api/categories', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
+          body: JSON.stringify({
+            id: formData.id,
+            name: formData.name,
+            color: formData.color,
+          }),
         });
         
         if (!response.ok) {
           const error = await response.json();
           throw new Error(error.error || 'Failed to update category');
         }
+        
+        // Update budget
+        if (formData.monthlyBudget !== undefined) {
+          const budgetResponse = await fetch(`/api/budgets/${formData.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              yearMonth: currentYearMonth,
+              monthlyLimit: formData.monthlyBudget,
+            }),
+          });
+          
+          if (!budgetResponse.ok) {
+            console.error('Failed to update budget');
+          }
+        }
       } else {
-        // Create new
+        // Create category
         const response = await fetch('/api/categories', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -138,6 +184,7 @@ export function CategoryManager() {
             <TableRow>
               <TableHead>Color</TableHead>
               <TableHead>Name</TableHead>
+              <TableHead>Monthly Budget (MYR)</TableHead>
               <TableHead>Type</TableHead>
               <TableHead className="w-[100px]">Actions</TableHead>
             </TableRow>
@@ -152,6 +199,13 @@ export function CategoryManager() {
                   />
                 </TableCell>
                 <TableCell className="font-medium">{category.name}</TableCell>
+                <TableCell>
+                  {category.monthlyBudget ? (
+                    <span className="font-medium">{category.monthlyBudget.toLocaleString()} MYR</span>
+                  ) : (
+                    <span className="text-muted-foreground text-sm">No budget set</span>
+                  )}
+                </TableCell>
                 <TableCell>
                   {category.isDefault ? (
                     <span className="text-xs text-muted-foreground">Default</span>
@@ -221,6 +275,25 @@ export function CategoryManager() {
                   className="flex-1"
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Wallet className="h-4 w-4" />
+                Monthly Budget (MYR)
+              </label>
+              <Input
+                type="number"
+                min="0"
+                step="1"
+                value={formData.monthlyBudget || ''}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                  setFormData({ ...formData, monthlyBudget: parseFloat(e.target.value) || 0 })
+                }
+                placeholder="0"
+              />
+              <p className="text-xs text-muted-foreground">
+                Set to 0 to remove budget for this category
+              </p>
             </div>
             <div className="flex justify-end gap-2 pt-4">
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
