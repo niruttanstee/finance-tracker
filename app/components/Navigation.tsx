@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Wallet } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 
 export function Navigation() {
@@ -13,6 +14,10 @@ export function Navigation() {
             <div className="flex gap-4">
               <Link href="/" className="text-sm hover:text-primary">
                 Dashboard
+              </Link>
+              <Link href="/budgets" className="text-sm hover:text-primary flex items-center gap-1">
+                <Wallet className="h-4 w-4" />
+                Budgets
               </Link>
               <Link href="/transactions" className="text-sm hover:text-primary">
                 Transactions
