@@ -24,7 +24,18 @@ export const categories = sqliteTable('categories', {
   isDefault: integer('is_default', { mode: 'boolean' }).notNull().default(false),
 });
 
+export const categoryBudgets = sqliteTable('category_budgets', {
+  id: text('id').primaryKey(), // composite: categoryId_yearMonth
+  categoryId: text('category_id').notNull().references(() => categories.id),
+  yearMonth: text('year_month', { length: 7 }).notNull(), // YYYY-MM format
+  monthlyLimit: real('monthly_limit').notNull().default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
 export type Transaction = typeof transactions.$inferSelect;
 export type NewTransaction = typeof transactions.$inferInsert;
 export type Category = typeof categories.$inferSelect;
 export type NewCategory = typeof categories.$inferInsert;
+export type CategoryBudget = typeof categoryBudgets.$inferSelect;
+export type NewCategoryBudget = typeof categoryBudgets.$inferInsert;

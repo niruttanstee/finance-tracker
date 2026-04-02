@@ -36,7 +36,19 @@ export function initDb() {
       is_default INTEGER NOT NULL DEFAULT 0
     );
 
+    CREATE TABLE IF NOT EXISTS category_budgets (
+      id TEXT PRIMARY KEY,
+      category_id TEXT NOT NULL,
+      year_month TEXT NOT NULL,
+      monthly_limit REAL NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      FOREIGN KEY (category_id) REFERENCES categories(id)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date);
     CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category);
+    CREATE INDEX IF NOT EXISTS idx_category_budgets_category ON category_budgets(category_id);
+    CREATE INDEX IF NOT EXISTS idx_category_budgets_month ON category_budgets(year_month);
   `);
 }
