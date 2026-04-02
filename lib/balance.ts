@@ -1,9 +1,31 @@
+import { createWiseClient } from './wise';
+
 export async function getCurrentBalance(): Promise<{ balance: number; currency: string }> {
-  const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/balance`);
+  // For server components, call Wise API directly instead of using HTTP API
+  const client = createWiseClient();
   
-  if (!response.ok) {
-    throw new Error('Failed to fetch balance');
+  // Get personal profile
+  const profiles = await client.getProfiles();
+  let personalProfile = profiles.find(p => p.type?.toLowerCase() === 'personal');
+  
+  if (!personalProfile && profiles.length > 0) {
+    personalProfile = profiles[0];
   }
   
-  return response.json();
+  if (!personalProfile) {
+    return { balance: 0, currency: 'MYR' };
+  }
+
+  // Get balances - filter for MYR only
+  const balances = await client.getBalances(personalProfile.id);
+  const myrBalance = balances.find(b => b.currency === 'MYR');
+  
+  if (!myrBalance) {
+    return { balance: 0, currency: 'MYR' };
+  }
+
+  return {
+    balance: Number(myrBalance.amount.value),
+    currency: 'MYR',
+  };
 }

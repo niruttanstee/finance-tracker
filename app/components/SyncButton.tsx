@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 
@@ -15,6 +16,7 @@ export function SyncButton() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [result, setResult] = useState<SyncResult | null>(null);
+  const router = useRouter();
 
   const handleSync = async () => {
     setIsSyncing(true);
@@ -31,6 +33,8 @@ export function SyncButton() {
           updated: data.updated,
         });
         setLastSync(new Date());
+        // Refresh the page to update balance and other data
+        router.refresh();
       } else {
         setResult({
           success: false,

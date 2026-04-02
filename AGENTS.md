@@ -68,6 +68,16 @@ WISE_API_TOKEN=your_token_here  # Required for sync
 | Sync fails | Check `WISE_API_TOKEN`, rate limits, permissions |
 | Missing categories | Run `npm run db:init` to seed defaults |
 
+## Budget Rollover Behavior
+
+Categories can be configured with `noRollover=true` (e.g., "Savings"). 
+These categories:
+- Don't accumulate unused budget from previous months
+- Show a "No Rollover" badge on budget cards
+- Have their rollover amount always set to 0
+
+To configure: Go to Settings → Categories → Edit Category → Check "No Rollover"
+
 ## Architecture Notes
 
 - **Dates:** SQLite stores Unix timestamps (integers), Drizzle auto-converts to JS Date

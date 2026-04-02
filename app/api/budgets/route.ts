@@ -1,5 +1,12 @@
 import { NextResponse } from 'next/server';
-import { getBudgetsWithSpending, updateBudgetLimit } from '@/lib/budgets';
+import { 
+  getBudgetsWithSpending, 
+  updateBudgetLimit, 
+  cascadeRecalculateFromMonth,
+  getOrCreateBudgetWithRollover,
+  getNextYearMonth
+} from '@/lib/budgets';
+import { updateCategoryDefaultBudget } from '@/lib/categories';
 
 export async function GET(request: Request) {
   try {
@@ -27,7 +34,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { categoryId, yearMonth, monthlyLimit } = await request.json();
+    const body = await request.json();
+    const { categoryId, yearMonth, monthlyLimit, updateDefault = true } = body;
 
     if (!categoryId || !yearMonth || typeof monthlyLimit !== 'number') {
       return NextResponse.json(
@@ -50,9 +58,22 @@ export async function POST(request: Request) {
       );
     }
 
+    // Update this month's budget
     const budget = await updateBudgetLimit(categoryId, yearMonth, monthlyLimit);
 
-    return NextResponse.json({ data: budget });
+    // Update category's default budget if requested (manual edit = new default)
+    if (updateDefault) {
+      await updateCategoryDefaultBudget(categoryId, monthlyLimit);
+    }
+
+    // Cascade recalculate all future months
+    const nextMonth = getNextYearMonth(yearMonth);
+    const monthsUpdated = await cascadeRecalculateFromMonth(categoryId, nextMonth);
+
+    return NextResponse.json({ 
+      data: budget,
+      cascadeUpdated: monthsUpdated
+    });
   } catch (error) {
     console.error('Error updating budget:', error);
     return NextResponse.json(

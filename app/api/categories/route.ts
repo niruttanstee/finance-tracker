@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getAllCategories, createCategory, updateCategory, deleteCategory } from '@/lib/categories';
+import { getAllCategories, createCategory, updateCategory, deleteCategory, updateCategoryDefaultBudget } from '@/lib/categories';
+import { recalculateAllBudgets } from '@/lib/budgets';
 
 export async function GET() {
   try {
@@ -17,7 +18,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, color } = body;
+    const { name, color, defaultBudget = 0, noRollover = false } = body;
     
     if (!name || !color) {
       return NextResponse.json(
@@ -26,7 +27,13 @@ export async function POST(request: Request) {
       );
     }
     
-    const category = await createCategory(name, color);
+    const category = await createCategory(name, color, noRollover);
+    
+    // Set default budget if provided
+    if (defaultBudget > 0) {
+      await updateCategoryDefaultBudget(category.id, defaultBudget);
+    }
+    
     return NextResponse.json({ data: category }, { status: 201 });
   } catch (error) {
     console.error('Error creating category:', error);
@@ -40,16 +47,38 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, name, color } = body;
+    const { id, name, color, defaultBudget, noRollover } = body;
     
-    if (!id || !name || !color) {
+    if (!id) {
       return NextResponse.json(
-        { error: 'ID, name, and color are required' },
+        { error: 'ID is required' },
         { status: 400 }
       );
     }
     
-    const category = await updateCategory(id, name, color);
+    let category;
+    
+    // Update name/color/noRollover if provided
+    if (name && color) {
+      category = await updateCategory(id, name, color, noRollover);
+    } else if (typeof noRollover !== 'undefined') {
+      // Just update noRollover if that's all that's being changed
+      category = await updateCategory(id, '', '', noRollover);
+    }
+    
+    // Update default budget if provided and trigger cascade
+    if (typeof defaultBudget === 'number' && defaultBudget >= 0) {
+      category = await updateCategoryDefaultBudget(id, defaultBudget);
+      
+      // Trigger cascade recalculation for all months
+      const monthsUpdated = await recalculateAllBudgets(id);
+      
+      return NextResponse.json({ 
+        data: category,
+        cascadeUpdated: monthsUpdated
+      });
+    }
+    
     return NextResponse.json({ data: category });
   } catch (error) {
     console.error('Error updating category:', error);

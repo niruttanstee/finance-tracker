@@ -1,6 +1,8 @@
 import { db } from './db';
 import { transactions, type Transaction } from './schema';
 import { eq, desc, gte, lte, and, sql } from 'drizzle-orm';
+import { recalculateNextMonthBudget } from './budgets';
+import { getCategoryByName } from './categories';
 
 export interface TransactionFilters {
   startDate?: Date;
@@ -49,10 +51,33 @@ export async function updateTransactionCategory(
   id: string,
   category: string | null
 ): Promise<void> {
+  // Get the transaction first to know its date and old category
+  const transaction = await getTransactionById(id);
+  if (!transaction) {
+    throw new Error('Transaction not found');
+  }
+
+  // Update the transaction
   await db
     .update(transactions)
     .set({ category, updatedAt: new Date() })
     .where(eq(transactions.id, id));
+
+  // Trigger recalculation for next month if the transaction has a category
+  if (category) {
+    const categoryObj = await getCategoryByName(category);
+    if (categoryObj) {
+      await recalculateNextMonthBudget(categoryObj.id, transaction.date);
+    }
+  }
+  
+  // Also recalculate for the old category if there was one
+  if (transaction.category) {
+    const oldCategoryObj = await getCategoryByName(transaction.category);
+    if (oldCategoryObj) {
+      await recalculateNextMonthBudget(oldCategoryObj.id, transaction.date);
+    }
+  }
 }
 
 export async function getMonthlySpending(

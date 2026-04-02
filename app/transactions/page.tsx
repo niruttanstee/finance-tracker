@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TransactionList } from '../components/transactions/TransactionList';
 import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 
 interface Transaction {
   id: string;
@@ -14,6 +15,9 @@ interface Transaction {
   description: string;
   amount: number;
   currency: string;
+  originalAmount: number | null;
+  originalCurrency: string | null;
+  exchangeRate: number | null;
   type: 'DEBIT' | 'CREDIT';
   category: string | undefined;
 }
@@ -76,11 +80,14 @@ export default function TransactionsPage() {
   if (loading) {
     return (
       <main className="container mx-auto py-8 px-4">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Transactions</h1>
+        <div className="mb-8">
           <Link href="/">
-            <Button variant="outline">Back to Dashboard</Button>
+            <Button variant="ghost" className="mb-4">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Dashboard
+            </Button>
           </Link>
+          <h1 className="text-3xl font-bold">Transactions</h1>
         </div>
         <Skeleton className="h-[400px] w-full" />
       </main>
@@ -89,16 +96,19 @@ export default function TransactionsPage() {
 
   return (
     <main className="container mx-auto py-8 px-4">
-      <div className="flex justify-between items-center mb-8">
+      <div className="mb-8">
+        <Link href="/">
+          <Button variant="ghost" className="mb-4">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Dashboard
+          </Button>
+        </Link>
         <div>
           <h1 className="text-3xl font-bold">Transactions</h1>
           <p className="text-muted-foreground">
             {transactions.length} total transactions
           </p>
         </div>
-        <Link href="/">
-          <Button variant="outline">Back to Dashboard</Button>
-        </Link>
       </div>
 
       <Card>

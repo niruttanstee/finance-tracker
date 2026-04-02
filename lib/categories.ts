@@ -16,12 +16,13 @@ export async function getCategoryById(id: string): Promise<Category | undefined>
 
 export async function createCategory(
   name: string,
-  color: string
+  color: string,
+  noRollover: boolean = false
 ): Promise<Category> {
   const id = name.toLowerCase().replace(/\s+/g, '-');
   const [category] = await db
     .insert(categories)
-    .values({ id, name, color, isDefault: false })
+    .values({ id, name, color, isDefault: false, noRollover })
     .returning();
   return category;
 }
@@ -29,7 +30,8 @@ export async function createCategory(
 export async function updateCategory(
   id: string,
   name: string,
-  color: string
+  color: string,
+  noRollover?: boolean
 ): Promise<Category> {
   // Don't update default categories
   const existingCategory = await getCategoryById(id);
@@ -37,9 +39,14 @@ export async function updateCategory(
     throw new Error('Cannot modify default categories');
   }
   
+  const updateData: { name?: string; color?: string; noRollover?: boolean } = { name, color };
+  if (typeof noRollover !== 'undefined') {
+    updateData.noRollover = noRollover;
+  }
+  
   const [category] = await db
     .update(categories)
-    .set({ name, color })
+    .set(updateData)
     .where(eq(categories.id, id))
     .returning();
   
@@ -48,6 +55,29 @@ export async function updateCategory(
   }
   
   return category;
+}
+
+export async function updateCategoryDefaultBudget(
+  id: string,
+  defaultBudget: number
+): Promise<Category> {
+  const [category] = await db
+    .update(categories)
+    .set({ defaultBudget })
+    .where(eq(categories.id, id))
+    .returning();
+  
+  if (!category) {
+    throw new Error('Category not found');
+  }
+  
+  return category;
+}
+
+export async function getCategoryByName(name: string): Promise<Category | undefined> {
+  return db.query.categories.findFirst({
+    where: eq(categories.name, name),
+  });
 }
 
 export async function deleteCategory(id: string): Promise<void> {

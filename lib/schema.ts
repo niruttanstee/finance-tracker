@@ -22,6 +22,8 @@ export const categories = sqliteTable('categories', {
   name: text('name').notNull().unique(),
   color: text('color').notNull(),
   isDefault: integer('is_default', { mode: 'boolean' }).notNull().default(false),
+  defaultBudget: real('default_budget').notNull().default(0),
+  noRollover: integer('no_rollover', { mode: 'boolean' }).notNull().default(false),
 });
 
 export const categoryBudgets = sqliteTable('category_budgets', {

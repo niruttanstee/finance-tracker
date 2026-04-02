@@ -22,12 +22,14 @@ export function Navigation() {
               <Link href="/transactions" className="text-sm hover:text-primary">
                 Transactions
               </Link>
-              <Link href="/settings" className="text-sm hover:text-primary">
-                Settings
-              </Link>
             </div>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-4">
+            <Link href="/settings" className="text-sm hover:text-primary">
+              Settings
+            </Link>
+            <ThemeToggle />
+          </div>
         </div>
       </div>
     </nav>

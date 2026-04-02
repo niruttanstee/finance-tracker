@@ -1,6 +1,7 @@
 'use client';
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { AlertTriangle, CheckCircle2, Wallet } from 'lucide-react';
 
@@ -8,20 +9,26 @@ interface BudgetCardProps {
   categoryName: string;
   categoryColor: string;
   monthlyLimit: number;
+  baseBudget: number;
+  rolloverAmount: number;
   spent: number;
   remaining: number;
   overspent: boolean;
   savedAmount: number;
+  noRollover?: boolean;
 }
 
 export function BudgetCard({
   categoryName,
   categoryColor,
   monthlyLimit,
+  baseBudget,
+  rolloverAmount,
   spent,
   remaining,
   overspent,
   savedAmount,
+  noRollover,
 }: BudgetCardProps) {
   const percentage = Math.min(100, (spent / monthlyLimit) * 100);
   const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
@@ -29,7 +36,7 @@ export function BudgetCard({
   const daysRemaining = daysInMonth - currentDay;
 
   return (
-    <Card className={`transition-colors ${overspent ? 'bg-red-50 border-red-300 dark:bg-red-950/20 dark:border-red-800' : ''}`}>
+    <Card className={`transition-colors ${overspent ? 'bg-red-50 ring-red-500 dark:bg-red-950/20 dark:ring-red-500' : ''}`}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -44,6 +51,11 @@ export function BudgetCard({
               <p className="text-sm text-muted-foreground">
                 {daysRemaining} days remaining
               </p>
+              {noRollover && (
+                <Badge variant="secondary" className="text-xs mt-1">
+                  No Rollover
+                </Badge>
+              )}
             </div>
           </div>
           {overspent ? (
@@ -69,10 +81,10 @@ export function BudgetCard({
           </div>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2" data-overspent={overspent}>
           <Progress
             value={percentage}
-            className={`h-3 ${overspent ? 'bg-red-200' : ''}`}
+            className="h-3"
           />
           <div className="flex justify-between text-sm">
             <span className={overspent ? 'text-red-600 font-medium' : 'text-muted-foreground'}>
@@ -90,11 +102,20 @@ export function BudgetCard({
           </div>
         </div>
 
+        {rolloverAmount > 0 && (
+          <div className="pt-2 border-t border-dashed">
+            <p className="text-sm text-blue-600 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4" />
+              +{rolloverAmount.toLocaleString()} MYR rollover from last month
+            </p>
+          </div>
+        )}
+
         {savedAmount > 0 && (
           <div className="pt-2 border-t border-dashed">
             <p className="text-sm text-green-600 flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4" />
-              {savedAmount.toLocaleString()} MYR saved this month
+              {savedAmount.toLocaleString()} MYR will roll over to next month
             </p>
           </div>
         )}

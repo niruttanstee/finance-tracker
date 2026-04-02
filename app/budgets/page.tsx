@@ -12,10 +12,13 @@ interface BudgetData {
   categoryName: string;
   categoryColor: string;
   monthlyLimit: number;
+  baseBudget: number;
+  rolloverAmount: number;
   spent: number;
   remaining: number;
   overspent: boolean;
   savedAmount: number;
+  noRollover: boolean;
 }
 
 export default function BudgetsPage() {
@@ -173,10 +176,13 @@ export default function BudgetsPage() {
               categoryName={budget.categoryName}
               categoryColor={budget.categoryColor}
               monthlyLimit={budget.monthlyLimit}
+              baseBudget={budget.baseBudget}
+              rolloverAmount={budget.rolloverAmount}
               spent={budget.spent}
               remaining={budget.remaining}
               overspent={budget.overspent}
               savedAmount={budget.savedAmount}
+              noRollover={budget.noRollover}
             />
           ))}
         </div>

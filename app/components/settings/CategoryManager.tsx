@@ -13,14 +13,16 @@ interface Category {
   name: string;
   color: string;
   isDefault: boolean;
-  monthlyBudget?: number;
+  defaultBudget?: number;
+  noRollover?: boolean;
 }
 
 interface CategoryFormData {
   id?: string;
   name: string;
   color: string;
-  monthlyBudget?: number;
+  defaultBudget: number;
+  noRollover: boolean;
 }
 
 export function CategoryManager() {
@@ -28,11 +30,16 @@ export function CategoryManager() {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [formData, setFormData] = useState<CategoryFormData>({ name: '', color: '#3b82f6', monthlyBudget: 0 });
+  const [formData, setFormData] = useState<CategoryFormData>({ name: '', color: '#3b82f6', defaultBudget: 0, noRollover: false });
   const [currentYearMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
+
+  // Budget dialog state
+  const [isBudgetDialogOpen, setIsBudgetDialogOpen] = useState(false);
+  const [budgetCategory, setBudgetCategory] = useState<Category | null>(null);
+  const [budgetValue, setBudgetValue] = useState<number>(0);
 
   useEffect(() => {
     fetchCategories();
@@ -40,24 +47,11 @@ export function CategoryManager() {
 
   async function fetchCategories() {
     try {
-      // Fetch categories
+      // Fetch categories with defaultBudget
       const catResponse = await fetch('/api/categories');
       const catData = await catResponse.json();
       
-      // Fetch budgets for current month
-      const budgetResponse = await fetch(`/api/budgets?yearMonth=${currentYearMonth}`);
-      const budgetData = await budgetResponse.json();
-      const budgetMap = new Map(
-        (budgetData.data || []).map((b: { categoryId: string; monthlyLimit: number }) => [b.categoryId, b.monthlyLimit])
-      );
-      
-      // Merge budget data
-      const categoriesWithBudgets = (catData.data || []).map((cat: Category) => ({
-        ...cat,
-        monthlyBudget: budgetMap.get(cat.id) || 0,
-      }));
-      
-      setCategories(categoriesWithBudgets);
+      setCategories(catData.data || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
     } finally {
@@ -67,7 +61,7 @@ export function CategoryManager() {
 
   function openAddDialog() {
     setEditingCategory(null);
-    setFormData({ name: '', color: '#3b82f6', monthlyBudget: 0 });
+    setFormData({ name: '', color: '#3b82f6', defaultBudget: 0, noRollover: false });
     setIsDialogOpen(true);
   }
 
@@ -77,7 +71,8 @@ export function CategoryManager() {
       id: category.id,
       name: category.name,
       color: category.color,
-      monthlyBudget: category.monthlyBudget || 0,
+      defaultBudget: category.defaultBudget || 0,
+      noRollover: category.noRollover || false,
     });
     setIsDialogOpen(true);
   }
@@ -85,7 +80,7 @@ export function CategoryManager() {
   async function handleSave() {
     try {
       if (editingCategory) {
-        // Update category
+        // Update category with defaultBudget
         const response = await fetch('/api/categories', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -93,6 +88,8 @@ export function CategoryManager() {
             id: formData.id,
             name: formData.name,
             color: formData.color,
+            defaultBudget: formData.defaultBudget,
+            noRollover: formData.noRollover,
           }),
         });
         
@@ -100,28 +97,17 @@ export function CategoryManager() {
           const error = await response.json();
           throw new Error(error.error || 'Failed to update category');
         }
-        
-        // Update budget
-        if (formData.monthlyBudget !== undefined) {
-          const budgetResponse = await fetch(`/api/budgets/${formData.id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              yearMonth: currentYearMonth,
-              monthlyLimit: formData.monthlyBudget,
-            }),
-          });
-          
-          if (!budgetResponse.ok) {
-            console.error('Failed to update budget');
-          }
-        }
       } else {
-        // Create category
+        // Create category with defaultBudget
         const response = await fetch('/api/categories', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
+          body: JSON.stringify({
+            name: formData.name,
+            color: formData.color,
+            defaultBudget: formData.defaultBudget,
+            noRollover: formData.noRollover,
+          }),
         });
         
         if (!response.ok) {
@@ -156,6 +142,40 @@ export function CategoryManager() {
     }
   }
 
+  function openBudgetDialog(category: Category) {
+    setBudgetCategory(category);
+    setBudgetValue(category.defaultBudget || 0);
+    setIsBudgetDialogOpen(true);
+  }
+
+  async function handleBudgetSave() {
+    try {
+      if (!budgetCategory) return;
+
+      const response = await fetch('/api/categories', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: budgetCategory.id,
+          name: budgetCategory.name,
+          color: budgetCategory.color,
+          defaultBudget: budgetValue,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update budget');
+      }
+
+      setIsBudgetDialogOpen(false);
+      fetchCategories();
+    } catch (error) {
+      console.error('Error updating budget:', error);
+      alert(error instanceof Error ? error.message : 'An error occurred');
+    }
+  }
+
   if (loading) {
     return (
       <Card>
@@ -184,8 +204,9 @@ export function CategoryManager() {
             <TableRow>
               <TableHead>Color</TableHead>
               <TableHead>Name</TableHead>
-              <TableHead>Monthly Budget (MYR)</TableHead>
+              <TableHead>Default Budget (MYR)</TableHead>
               <TableHead>Type</TableHead>
+              <TableHead>Rollover</TableHead>
               <TableHead className="w-[100px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -200,8 +221,8 @@ export function CategoryManager() {
                 </TableCell>
                 <TableCell className="font-medium">{category.name}</TableCell>
                 <TableCell>
-                  {category.monthlyBudget ? (
-                    <span className="font-medium">{category.monthlyBudget.toLocaleString()} MYR</span>
+                  {category.defaultBudget ? (
+                    <span className="font-medium">{category.defaultBudget.toLocaleString()} MYR</span>
                   ) : (
                     <span className="text-muted-foreground text-sm">No budget set</span>
                   )}
@@ -214,7 +235,23 @@ export function CategoryManager() {
                   )}
                 </TableCell>
                 <TableCell>
+                  {category.noRollover ? (
+                    <span className="text-xs text-amber-600 font-medium">No</span>
+                  ) : (
+                    <span className="text-xs text-green-600">Yes</span>
+                  )}
+                </TableCell>
+                <TableCell>
                   <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => openBudgetDialog(category)}
+                      title="Set Budget"
+                    >
+                      <Wallet className="h-4 w-4" />
+                    </Button>
                     {!category.isDefault && (
                       <>
                         <Button
@@ -279,15 +316,15 @@ export function CategoryManager() {
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center gap-2">
                 <Wallet className="h-4 w-4" />
-                Monthly Budget (MYR)
+                Default Budget (MYR)
               </label>
               <Input
                 type="number"
                 min="0"
                 step="1"
-                value={formData.monthlyBudget || ''}
+                value={formData.defaultBudget || ''}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                  setFormData({ ...formData, monthlyBudget: parseFloat(e.target.value) || 0 })
+                  setFormData({ ...formData, defaultBudget: parseFloat(e.target.value) || 0 })
                 }
                 placeholder="0"
               />
@@ -295,12 +332,67 @@ export function CategoryManager() {
                 Set to 0 to remove budget for this category
               </p>
             </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="noRollover"
+                checked={formData.noRollover}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                  setFormData({ ...formData, noRollover: e.target.checked })
+                }
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <label htmlFor="noRollover" className="text-sm font-normal text-gray-700">
+                No Rollover (e.g., for Savings - budget doesn&apos;t accumulate month-to-month)
+              </label>
+            </div>
             <div className="flex justify-end gap-2 pt-4">
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                 Cancel
               </Button>
               <Button onClick={handleSave}>
                 {editingCategory ? 'Save Changes' : 'Add Category'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Budget Dialog */}
+      <Dialog open={isBudgetDialogOpen} onOpenChange={setIsBudgetDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Set Budget for {budgetCategory?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Wallet className="h-4 w-4" />
+                Default Budget (MYR)
+              </label>
+              <Input
+                type="number"
+                min="0"
+                step="1"
+                value={budgetValue || ''}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                  setBudgetValue(parseFloat(e.target.value) || 0)
+                }
+                placeholder="0"
+                autoFocus
+              />
+              <p className="text-xs text-muted-foreground">
+                Set to 0 to remove budget for this category
+              </p>
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={() => setIsBudgetDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleBudgetSave}>
+                Save Budget
               </Button>
             </div>
           </div>
