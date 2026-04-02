@@ -1,5 +1,5 @@
 import { db } from './db';
-import { categoryBudgets, transactions, categories, type CategoryBudget } from './schema';
+import { categoryBudgets, transactions, type CategoryBudget } from './schema';
 import { eq, and, gte, lte, sql } from 'drizzle-orm';
 
 export interface BudgetWithSpending {

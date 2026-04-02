@@ -1,5 +1,5 @@
 import { db } from './db';
-import { transactions, categories, type Transaction } from './schema';
+import { transactions, type Transaction } from './schema';
 import { eq, desc, gte, lte, and, sql } from 'drizzle-orm';
 
 export interface TransactionFilters {
@@ -14,7 +14,7 @@ export async function getTransactions(
   limit = 100,
   offset = 0
 ): Promise<Transaction[]> {
-  let conditions = [];
+  const conditions = [];
 
   if (filters?.startDate) {
     conditions.push(gte(transactions.date, filters.startDate));

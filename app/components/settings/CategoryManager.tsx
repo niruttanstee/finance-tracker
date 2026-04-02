@@ -29,7 +29,7 @@ export function CategoryManager() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [formData, setFormData] = useState<CategoryFormData>({ name: '', color: '#3b82f6', monthlyBudget: 0 });
-  const [currentYearMonth, setCurrentYearMonth] = useState(() => {
+  const [currentYearMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
@@ -48,7 +48,7 @@ export function CategoryManager() {
       const budgetResponse = await fetch(`/api/budgets?yearMonth=${currentYearMonth}`);
       const budgetData = await budgetResponse.json();
       const budgetMap = new Map(
-        (budgetData.data || []).map((b: any) => [b.categoryId, b.monthlyLimit])
+        (budgetData.data || []).map((b: { categoryId: string; monthlyLimit: number }) => [b.categoryId, b.monthlyLimit])
       );
       
       // Merge budget data
