@@ -21,6 +21,14 @@ interface CategoryBreakdownProps {
 
 export function CategoryBreakdown({ data }: CategoryBreakdownProps) {
   const total = data.reduce((sum, item) => sum + item.amount, 0);
+  
+  if (data.length === 0) {
+    return (
+      <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
+        No spending data for this period
+      </div>
+    );
+  }
 
   return (
     <div className="h-[300px] w-full">
