@@ -1,8 +1,8 @@
 'use client';
 
 import {
-  BarChart,
-  Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -18,15 +18,35 @@ interface CategorySpendingTrendProps {
 }
 
 export function CategorySpendingTrend({ data, categories }: CategorySpendingTrendProps) {
-  const formattedData = data.map(item => ({
-    ...item,
-    formattedMonth: format(parseISO(item.month + '-01'), 'MMM yyyy'),
-  }));
+  // Filter out Income category and categories with no spending
+  const spendingCategories = categories.filter(cat => {
+    if (cat.name === 'Income') return false;
+    // Check if this category has any spending across all months
+    const hasSpending = data.some(monthData => {
+      const amount = Number(monthData[cat.name]) || 0;
+      return amount > 0;
+    });
+    return hasSpending;
+  });
+
+  // Add total spending to each data point
+  const formattedData = data.map(item => {
+    const total = spendingCategories.reduce((sum, cat) => {
+      const amount = Number(item[cat.name]) || 0;
+      return sum + amount;
+    }, 0);
+    
+    return {
+      ...item,
+      formattedMonth: format(parseISO(item.month + '-01'), 'MMM yyyy'),
+      'Total': total,
+    };
+  });
 
   return (
     <div className="h-[300px] w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={formattedData}>
+        <LineChart data={formattedData}>
           <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
           <XAxis 
             dataKey="formattedMonth" 
@@ -41,16 +61,27 @@ export function CategorySpendingTrend({ data, categories }: CategorySpendingTren
             labelStyle={{ color: '#000' }}
           />
           <Legend />
-          {categories.map((category) => (
-            <Bar
+          {/* Total Spending line - bold black */}
+          <Line
+            type="monotone"
+            dataKey="Total"
+            stroke="#000000"
+            strokeWidth={3}
+            dot={{ fill: '#000000', strokeWidth: 2, r: 4 }}
+            activeDot={{ r: 6 }}
+          />
+          {/* Individual category lines */}
+          {spendingCategories.map((category) => (
+            <Line
               key={category.name}
+              type="monotone"
               dataKey={category.name}
-              stackId="a"
-              fill={category.color}
-              name={category.name}
+              stroke={category.color}
+              strokeWidth={1.5}
+              dot={false}
             />
           ))}
-        </BarChart>
+        </LineChart>
       </ResponsiveContainer>
     </div>
   );
