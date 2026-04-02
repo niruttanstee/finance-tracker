@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDashboardData } from '@/lib/dashboard';
+import { getCurrentBalance } from '@/lib/balance';
+import { getUncategorizedCount } from '@/lib/transactions';
 import { format } from 'date-fns';
 
 export async function GET(request: NextRequest) {
@@ -10,9 +12,17 @@ export async function GET(request: NextRequest) {
     // Default to current month if not specified
     const targetMonth = month || format(new Date(), 'yyyy-MM');
     
-    const data = await getDashboardData(targetMonth);
+    const [data, balance, uncategorizedCount] = await Promise.all([
+      getDashboardData(targetMonth),
+      getCurrentBalance(),
+      getUncategorizedCount(),
+    ]);
     
-    return NextResponse.json(data);
+    return NextResponse.json({
+      ...data,
+      availableFunds: balance.balance,
+      uncategorizedCount,
+    });
   } catch (error) {
     console.error('Error fetching dashboard data:', error);
     return NextResponse.json(

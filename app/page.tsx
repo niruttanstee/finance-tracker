@@ -3,22 +3,21 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { SyncButton } from './components/SyncButton';
 import { CategoryBreakdown } from './components/charts/CategoryBreakdown';
-import { SavingsRate } from './components/charts/SavingsRate';
+import { CategorySpendingTrend } from './components/charts/CategorySpendingTrend';
 import { format, subMonths, parseISO } from 'date-fns';
-import { ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownRight, TrendingUp } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ArrowDownRight, Wallet, Tag, TrendingUp } from 'lucide-react';
 
 interface DashboardData {
   month: string;
   spending: number;
-  income: number;
   savings: number;
-  savingsRate: number;
+  availableFunds: number;
+  uncategorizedCount: number;
   categoryBreakdown: { category: string; amount: number; color: string }[];
-  monthlyTrend: { month: string; spending: number; income: number; savings: number }[];
+  categorySpendingTrend: { month: string; [category: string]: number | string }[];
 }
 
 export default function DashboardPage() {
@@ -26,6 +25,7 @@ export default function DashboardPage() {
   const searchParams = useSearchParams();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<{ name: string; color: string }[]>([]);
   
   const selectedMonth = searchParams.get('month') || format(new Date(), 'yyyy-MM');
   
@@ -33,9 +33,14 @@ export default function DashboardPage() {
     async function fetchData() {
       setLoading(true);
       try {
-        const response = await fetch(`/api/dashboard?month=${selectedMonth}`);
-        const dashboardData = await response.json();
+        const [dashboardResponse, categoriesResponse] = await Promise.all([
+          fetch(`/api/dashboard?month=${selectedMonth}`),
+          fetch('/api/categories'),
+        ]);
+        const dashboardData = await dashboardResponse.json();
+        const categoriesData = await categoriesResponse.json();
         setData(dashboardData);
+        setCategories(categoriesData.map((c: { name: string; color: string }) => ({ name: c.name, color: c.color })));
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {
@@ -61,13 +66,6 @@ export default function DashboardPage() {
     const date = new Date(year, month - 1, 1);
     return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   }
-  
-  // Calculate comparison with previous month
-  const previousMonth = format(subMonths(parseISO(selectedMonth + '-01'), 1), 'yyyy-MM');
-  const previousMonthData = data?.monthlyTrend.find(d => d.month === previousMonth);
-  const spendingChange = previousMonthData && data
-    ? ((data.spending - previousMonthData.spending) / previousMonthData.spending) * 100
-    : 0;
   
   if (loading) {
     return (
@@ -109,19 +107,42 @@ export default function DashboardPage() {
 
       {/* Month Navigation - Budget Page Style */}
       <div className="flex items-center justify-center gap-4 mb-8">
-        <Button variant="outline" size="icon" onClick={() => navigateMonth('prev')}>
+        <button 
+          className="p-2 rounded-md border hover:bg-gray-100" 
+          onClick={() => navigateMonth('prev')}
+        >
           <ChevronLeft className="h-4 w-4" />
-        </Button>
+        </button>
         <h2 className="text-xl font-semibold min-w-[200px] text-center">
           {formatMonthLabel(selectedMonth)}
         </h2>
-        <Button variant="outline" size="icon" onClick={() => navigateMonth('next')}>
+        <button 
+          className="p-2 rounded-md border hover:bg-gray-100" 
+          onClick={() => navigateMonth('next')}
+        >
           <ChevronRight className="h-4 w-4" />
-        </Button>
+        </button>
       </div>
 
       {/* Key Metrics */}
       <div className="grid gap-4 md:grid-cols-4 mb-8">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Available Funds
+            </CardTitle>
+            <Wallet className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              RM {data.availableFunds.toFixed(2)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Current balance
+            </p>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -133,27 +154,8 @@ export default function DashboardPage() {
             <div className="text-2xl font-bold">
               RM {data.spending.toFixed(2)}
             </div>
-            <p className={`text-xs ${
-              spendingChange > 0 ? 'text-red-600' : 'text-green-600'
-            }`}>
-              {spendingChange > 0 ? '+' : ''}{spendingChange.toFixed(1)}% from last month
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Monthly Income
-            </CardTitle>
-            <ArrowUpRight className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              RM {data.income.toFixed(2)}
-            </div>
             <p className="text-xs text-muted-foreground">
-              Total earnings this month
+              Total spent this month
             </p>
           </CardContent>
         </Card>
@@ -163,43 +165,50 @@ export default function DashboardPage() {
             <CardTitle className="text-sm font-medium">
               Savings
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-blue-600" />
+            <TrendingUp className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               RM {data.savings.toFixed(2)}
             </div>
-            <p className={`text-xs ${
-              data.savingsRate >= 20 ? 'text-green-600' : 'text-yellow-600'
-            }`}>
-              {data.savingsRate.toFixed(1)}% savings rate
+            <p className="text-xs text-muted-foreground">
+              Income minus spending
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Quick Actions
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Link href="/transactions">
-              <Button className="w-full">View All Transactions</Button>
-            </Link>
-          </CardContent>
-        </Card>
+        <Link href="/transactions">
+          <Card className="cursor-pointer hover:bg-gray-50 transition-colors">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Uncategorized
+              </CardTitle>
+              <Tag className="h-4 w-4 text-orange-600" />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${data.uncategorizedCount === 0 ? 'text-green-600' : ''}`}>
+                {data.uncategorizedCount}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                transactions need attention
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* Charts */}
       <div className="grid gap-4 md:grid-cols-2 mb-8">
         <Card>
           <CardHeader>
-            <CardTitle>Savings Rate Trend</CardTitle>
-            <CardDescription>Income vs Spending vs Savings Rate</CardDescription>
+            <CardTitle>Category Spending Trend</CardTitle>
+            <CardDescription>Spending by category over last 6 months</CardDescription>
           </CardHeader>
           <CardContent>
-            <SavingsRate data={data.monthlyTrend} />
+            <CategorySpendingTrend 
+              data={data.categorySpendingTrend} 
+              categories={categories}
+            />
           </CardContent>
         </Card>
 
