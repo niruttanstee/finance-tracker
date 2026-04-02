@@ -15,6 +15,7 @@ async function main() {
     { id: 'healthcare', name: 'Healthcare', color: '#a855f7', isDefault: true },
     { id: 'travel', name: 'Travel', color: '#ec4899', isDefault: true },
     { id: 'income', name: 'Income', color: '#14b8a6', isDefault: true },
+    { id: 'savings', name: 'Savings', color: '#10b981', isDefault: true },
     { id: 'other', name: 'Other', color: '#6b7280', isDefault: true },
   ];
 
