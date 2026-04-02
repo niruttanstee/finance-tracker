@@ -1,71 +1,22 @@
-import { NextResponse } from 'next/server';
-import { 
-  getMonthlySpending, 
-  getCategoryBreakdown, 
-  getUncategorizedCount,
-  getTransactions 
-} from '@/lib/transactions';
-import { subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { NextRequest, NextResponse } from 'next/server';
+import { getDashboardData } from '@/lib/dashboard';
+import { format } from 'date-fns';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Get current and previous month totals
-    const now = new Date();
-    const currentMonthStart = startOfMonth(now);
-    const currentMonthEnd = endOfMonth(now);
-    const lastMonthStart = startOfMonth(subMonths(now, 1));
-    const lastMonthEnd = endOfMonth(subMonths(now, 1));
-
-    const currentMonthTransactions = await getTransactions({
-      startDate: currentMonthStart,
-      endDate: currentMonthEnd,
-      type: 'DEBIT',
-    });
-
-    const lastMonthTransactions = await getTransactions({
-      startDate: lastMonthStart,
-      endDate: lastMonthEnd,
-      type: 'DEBIT',
-    });
-
-    const currentMonthTotal = currentMonthTransactions.reduce(
-      (sum, t) => sum + t.amount, 
-      0
-    );
-
-    const lastMonthTotal = lastMonthTransactions.reduce(
-      (sum, t) => sum + t.amount, 
-      0
-    );
-
-    const percentChange = lastMonthTotal > 0
-      ? ((currentMonthTotal - lastMonthTotal) / lastMonthTotal) * 100
-      : 0;
-
-    // Get monthly spending chart data
-    const monthlySpending = await getMonthlySpending(6);
-
-    // Get category breakdown
-    const categoryBreakdown = await getCategoryBreakdown(
-      currentMonthStart,
-      currentMonthEnd
-    );
-
-    // Get uncategorized count
-    const uncategorizedCount = await getUncategorizedCount();
-
-    return NextResponse.json({
-      currentMonthTotal,
-      lastMonthTotal,
-      percentChange,
-      monthlySpending,
-      categoryBreakdown,
-      uncategorizedCount,
-    });
+    const searchParams = request.nextUrl.searchParams;
+    const month = searchParams.get('month');
+    
+    // Default to current month if not specified
+    const targetMonth = month || format(new Date(), 'yyyy-MM');
+    
+    const data = await getDashboardData(targetMonth);
+    
+    return NextResponse.json(data);
   } catch (error) {
-    console.error('Dashboard error:', error);
+    console.error('Error fetching dashboard data:', error);
     return NextResponse.json(
-      { error: 'Failed to load dashboard data' },
+      { error: 'Failed to fetch dashboard data' },
       { status: 500 }
     );
   }
