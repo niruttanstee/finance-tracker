@@ -8,8 +8,15 @@ import { generateSessionId, signSession, COOKIE_NAME } from '@/lib/auth/session'
 const SESSION_DURATION_DAYS = 30;
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const { username, password } = body;
+  let username: string;
+  let password: string;
+  try {
+    const body = await request.json();
+    username = body.username;
+    password = body.password;
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
 
   if (!username || !password) {
     return NextResponse.json({ error: 'Username and password required' }, { status: 400 });
