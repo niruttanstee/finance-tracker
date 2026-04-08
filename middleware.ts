@@ -36,14 +36,20 @@ export async function middleware(request: NextRequest) {
 
   // Look up session in DB
   const now = new Date();
-  const [session] = await db
-    .select()
-    .from(sessions)
-    .where(and(
-      eq(sessions.id, sessionId),
-      gt(sessions.expiresAt, now)
-    ))
-    .limit(1);
+  let session;
+  try {
+    [session] = await db
+      .select()
+      .from(sessions)
+      .where(and(
+        eq(sessions.id, sessionId),
+        gt(sessions.expiresAt, now)
+      ))
+      .limit(1);
+  } catch (err) {
+    console.error('Session DB error:', err);
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   if (!session) {
     const response = NextResponse.json({ error: 'Session expired' }, { status: 401 });

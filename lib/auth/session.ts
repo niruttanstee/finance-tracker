@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 
 const SECRET = process.env.SESSION_SECRET!;
+if (!SECRET) throw new Error('SESSION_SECRET environment variable is required');
 const COOKIE_NAME = 'sessionId';
 const SEPARATOR = '.';
 
