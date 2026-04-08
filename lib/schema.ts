@@ -35,9 +35,19 @@ export const categoryBudgets = sqliteTable('category_budgets', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
+export const settings = sqliteTable('settings', {
+  id: text('id').primaryKey().default('app_settings'),
+  apiProvider: text('api_provider'), // 'wise' | null
+  apiKey: text('api_key'), // encrypted or plain Wise token
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
 export type Transaction = typeof transactions.$inferSelect;
 export type NewTransaction = typeof transactions.$inferInsert;
 export type Category = typeof categories.$inferSelect;
 export type NewCategory = typeof categories.$inferInsert;
 export type CategoryBudget = typeof categoryBudgets.$inferSelect;
 export type NewCategoryBudget = typeof categoryBudgets.$inferInsert;
+export type Settings = typeof settings.$inferSelect;
+export type NewSettings = typeof settings.$inferInsert;

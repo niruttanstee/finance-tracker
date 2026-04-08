@@ -50,5 +50,13 @@ export function initDb() {
     CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category);
     CREATE INDEX IF NOT EXISTS idx_category_budgets_category ON category_budgets(category_id);
     CREATE INDEX IF NOT EXISTS idx_category_budgets_month ON category_budgets(year_month);
+
+    CREATE TABLE IF NOT EXISTS settings (
+      id TEXT PRIMARY KEY DEFAULT 'app_settings',
+      api_provider TEXT,
+      api_key TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
   `);
 }
