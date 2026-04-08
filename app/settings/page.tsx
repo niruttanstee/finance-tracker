@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { CategoryManager } from '../components/settings/CategoryManager';
+import { ApiSettings } from '../components/settings/ApiSettings';
 import { ArrowLeft } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function SettingsPage() {
   return (
@@ -19,11 +21,20 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <div className="space-y-6">
-        <CategoryManager />
-        
-        {/* Future settings sections can be added here */}
-      </div>
+      <Tabs defaultValue="categories" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="categories">Categories</TabsTrigger>
+          <TabsTrigger value="apis">APIs</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="categories">
+          <CategoryManager />
+        </TabsContent>
+
+        <TabsContent value="apis">
+          <ApiSettings />
+        </TabsContent>
+      </Tabs>
     </main>
   );
 }
