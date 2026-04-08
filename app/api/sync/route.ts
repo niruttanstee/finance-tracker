@@ -4,12 +4,7 @@ import { db } from '@/lib/db';
 import { transactions } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 
-function generateCompositeId(date: Date, merchant: string, amount: number, currency: string): string {
-  const timestamp = Math.floor(date.getTime() / 1000);
-  const sanitizedMerchant = merchant.replace(/[^a-zA-Z0-9]/g, '_');
-  const amountStr = amount.toFixed(2).replace('.', '_');
-  return `${timestamp}_${sanitizedMerchant}_${amountStr}_${currency}`;
-}
+import { generateCompositeId } from '@/lib/transactions';
 
 function extractMerchant(description: string | null | undefined, typeLabel: string): string {
   // Try to extract merchant name from Wise description

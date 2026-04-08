@@ -137,3 +137,10 @@ export async function getUncategorizedCount(): Promise<number> {
 
   return result[0]?.count || 0;
 }
+
+export function generateCompositeId(date: Date, merchant: string, amount: number, currency: string): string {
+  const timestamp = Math.floor(date.getTime() / 1000);
+  const sanitizedMerchant = merchant.replace(/[^a-zA-Z0-9]/g, '_');
+  const amountStr = amount.toFixed(2).replace('.', '_');
+  return `${timestamp}_${sanitizedMerchant}_${amountStr}_${currency}`;
+}
