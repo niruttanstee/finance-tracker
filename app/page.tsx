@@ -26,7 +26,8 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<{ name: string; color: string }[]>([]);
-  
+  const [hasWiseToken, setHasWiseToken] = useState(false);
+
   const selectedMonth = searchParams.get('month') || format(new Date(), 'yyyy-MM');
   
   useEffect(() => {
@@ -39,8 +40,11 @@ export default function DashboardPage() {
         ]);
         const dashboardData = await dashboardResponse.json();
         const categoriesData = await categoriesResponse.json();
+        const settingsResponse = await fetch('/api/settings');
+        const settingsData = await settingsResponse.json();
         setData(dashboardData);
         setCategories(categoriesData.map((c: { name: string; color: string }) => ({ name: c.name, color: c.color })));
+        setHasWiseToken(settingsData.data?.apiProvider === 'wise' && !!settingsData.data?.apiKey);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {
@@ -102,7 +106,7 @@ export default function DashboardPage() {
             Track your spending and manage your finances
           </p>
         </div>
-        <SyncButton />
+        <SyncButton mode={hasWiseToken ? 'wise' : 'upload'} />
       </div>
 
       {/* Month Navigation - Budget Page Style */}
