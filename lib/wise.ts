@@ -138,10 +138,7 @@ export class WiseClient {
   }
 }
 
-export function createWiseClient(): WiseClient {
-  const token = process.env.WISE_API_TOKEN;
-  if (!token) {
-    throw new Error('WISE_API_TOKEN not configured');
-  }
+export function createWiseClient(token?: string): WiseClient | null {
+  if (!token) return null;
   return new WiseClient(token);
 }
