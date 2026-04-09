@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createWiseClient } from '@/lib/wise';
 import { db } from '@/lib/db';
-import { transactions } from '@/lib/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
+import { transactions, settings } from '@/lib/schema';
 
 import { generateCompositeId } from '@/lib/transactions';
 
@@ -106,9 +106,32 @@ async function parseStatementTransaction(
   };
 }
 
-export async function POST() {
+export async function POST(request: Request) {
+  const userId = request.headers.get('x-user-id');
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
-    const client = createWiseClient();
+    // Fetch user's Wise token from their settings
+    const userSettings = await db.query.settings.findFirst({
+      where: and(eq(settings.id, 'app_settings'), eq(settings.userId, userId)),
+    });
+
+    if (!userSettings?.apiKey) {
+      return NextResponse.json(
+        { error: 'No Wise token configured. Use PDF upload instead.' },
+        { status: 400 }
+      );
+    }
+
+    const client = createWiseClient(userSettings.apiKey);
+    if (!client) {
+      return NextResponse.json(
+        { error: 'No Wise token configured. Use PDF upload instead.' },
+        { status: 400 }
+      );
+    }
     
     // Get personal profile
     const profiles = await client.getProfiles();
