@@ -1,12 +1,17 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { settings } from '@/lib/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const userId = request.headers.get('x-user-id');
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const result = await db.query.settings.findFirst({
-      where: eq(settings.id, 'app_settings'),
+      where: and(eq(settings.id, 'app_settings'), eq(settings.userId, userId)),
     });
     return NextResponse.json({
       data: result || { id: 'app_settings', apiProvider: null, apiKey: null },
@@ -19,14 +24,19 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
+    const userId = request.headers.get('x-user-id');
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { apiProvider, apiKey } = await request.json();
     const now = new Date();
 
     await db
       .insert(settings)
-      .values({ id: 'app_settings', apiProvider, apiKey, createdAt: now, updatedAt: now })
+      .values({ id: 'app_settings', apiProvider, apiKey, createdAt: now, updatedAt: now, userId })
       .onConflictDoUpdate({
-        target: settings.id,
+        target: [settings.id, settings.userId],
         set: { apiProvider, apiKey, updatedAt: now },
       });
 
