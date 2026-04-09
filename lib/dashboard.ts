@@ -23,7 +23,7 @@ export async function getDashboardData(monthStr: string): Promise<DashboardData>
   // Fetch category spending trend (last 6 months by category)
   const categoryTrendData = await db
     .select({
-      month: sql<string>`strftime('%Y-%m', ${transactions.date}, 'unixepoch')`,
+      month: sql<string>`to_char(${transactions.date}, 'YYYY-MM')`,
       category: transactions.category,
       amount: sql<number>`SUM(${transactions.amount})`,
     })
@@ -35,10 +35,10 @@ export async function getDashboardData(monthStr: string): Promise<DashboardData>
       )
     )
     .groupBy(
-      sql`strftime('%Y-%m', ${transactions.date}, 'unixepoch')`,
+      sql`to_char(${transactions.date}, 'YYYY-MM')`,
       transactions.category
     )
-    .orderBy(sql`strftime('%Y-%m', ${transactions.date}, 'unixepoch')`);
+    .orderBy(sql`to_char(${transactions.date}, 'YYYY-MM')`);
   
   // Get all categories and their colors
   const categoryList = await db.query.categories.findMany();

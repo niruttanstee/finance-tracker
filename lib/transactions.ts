@@ -88,13 +88,13 @@ export async function getMonthlySpending(
 
   const result = await db
     .select({
-      month: sql<string>`strftime('%Y-%m', ${transactions.date}, 'unixepoch')`,
+      month: sql<string>`to_char(${transactions.date}, 'YYYY-MM')`,
       amount: sql<number>`SUM(CASE WHEN ${transactions.type} = 'DEBIT' THEN ${transactions.amount} ELSE 0 END)`,
     })
     .from(transactions)
     .where(gte(transactions.date, startDate))
-    .groupBy(sql`strftime('%Y-%m', ${transactions.date}, 'unixepoch')`)
-    .orderBy(sql`strftime('%Y-%m', ${transactions.date}, 'unixepoch')`);
+    .groupBy(sql`to_char(${transactions.date}, 'YYYY-MM')`)
+    .orderBy(sql`to_char(${transactions.date}, 'YYYY-MM')`);
 
   return result;
 }
