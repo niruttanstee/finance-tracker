@@ -1,4 +1,4 @@
-import { pgTable, text, integer, real, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, real, timestamp, primaryKey } from 'drizzle-orm/pg-core';
 
 export const transactions = pgTable('transactions', {
   id: text('id').primaryKey(),
@@ -39,13 +39,15 @@ export const categoryBudgets = pgTable('category_budgets', {
 });
 
 export const settings = pgTable('settings', {
-  id: text('id').primaryKey().default('app_settings'),
+  id: text('id').notNull().default('app_settings'),
+  userId: text('user_id').notNull().default(''),
   apiProvider: text('api_provider'), // 'wise' | null
   apiKey: text('api_key'), // encrypted or plain Wise token
   createdAt: timestamp('created_at').notNull(),
   updatedAt: timestamp('updated_at').notNull(),
-  userId: text('user_id').notNull().default(''),
-});
+}, (table) => ({
+  pk: primaryKey([table.id, table.userId]),
+}));
 
 export const users = pgTable('users', {
   id: text('id').primaryKey(),
