@@ -3,8 +3,9 @@ import { createWiseClient } from '@/lib/wise';
 import { db } from '@/lib/db';
 import { eq, and } from 'drizzle-orm';
 import { transactions, settings } from '@/lib/schema';
+import { getUserIdFromRequest } from '@/lib/auth/api';
 
-import { generateCompositeId } from '@/lib/transactions';
+import { generateCompositeId, isTransactionIdentical } from '@/lib/transactions';
 
 function extractMerchant(description: string | null | undefined, typeLabel: string): string {
   // Try to extract merchant name from Wise description
@@ -107,7 +108,7 @@ async function parseStatementTransaction(
 }
 
 export async function POST(request: Request) {
-  const userId = request.headers.get('x-user-id');
+  const userId = await getUserIdFromRequest(request as any);
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -232,6 +233,7 @@ export async function POST(request: Request) {
 
     let inserted = 0;
     let updated = 0;
+    let skipped = 0;
 
     for (const transaction of deduplicatedTransactions) {
       // Validate required fields
@@ -240,22 +242,33 @@ export async function POST(request: Request) {
         continue;
       }
       
-      // Check if transaction exists
+      // Check if transaction exists for this user
       const existing = await db.query.transactions.findFirst({
-        where: eq(transactions.id, transaction.id),
+        where: and(eq(transactions.id, transaction.id), eq(transactions.userId, userId)),
       });
 
       if (existing) {
-        await db.update(transactions)
-          .set({
-            ...transaction,
-            category: existing.category, // Preserve existing category
-            updatedAt: new Date(),
-          })
-          .where(eq(transactions.id, transaction.id));
-        updated++;
+        if (isTransactionIdentical(existing, transaction)) {
+          // Record is identical — skip the write to preserve user-modified category
+          skipped++;
+        } else {
+          await db.update(transactions)
+            .set({
+              ...transaction,
+              profileId: existing.profileId,
+              category: existing.category, // Preserve existing category
+              updatedAt: new Date(),
+            })
+            .where(and(eq(transactions.id, transaction.id), eq(transactions.userId, userId)));
+          updated++;
+        }
       } else {
-        await db.insert(transactions).values(transaction);
+        await db.insert(transactions).values({
+          ...transaction,
+          profileId: 0,
+          userId,
+          category: transaction.type === 'CREDIT' ? 'Income' : null,
+        });
         inserted++;
       }
     }
@@ -264,6 +277,7 @@ export async function POST(request: Request) {
       success: true,
       inserted,
       updated,
+      skipped,
       total: allTransactions.length,
       unique: deduplicatedTransactions.length,
     });
