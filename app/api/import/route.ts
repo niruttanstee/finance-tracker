@@ -1,11 +1,17 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { parseBankStatement } from '@/lib/bank-parser';
-import { generateCompositeId } from '@/lib/transactions';
+import { generateCompositeId, isTransactionIdentical } from '@/lib/transactions';
 import { db } from '@/lib/db';
 import { transactions } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
+import { getUserIdFromRequest } from '@/lib/auth/api';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const userId = await getUserIdFromRequest(request);
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
@@ -41,6 +47,7 @@ export async function POST(request: Request) {
 
     let inserted = 0;
     let updated = 0;
+    let skipped = 0;
 
     for (const tx of parsed.transactions) {
       const compositeId = generateCompositeId(tx.date, tx.merchant, tx.amount, tx.currency);
@@ -50,25 +57,8 @@ export async function POST(request: Request) {
       });
 
       if (existing) {
-        await db
-          .update(transactions)
-          .set({
-            description: tx.description,
-            merchant: tx.merchant,
-            amount: tx.amount,
-            currency: tx.currency,
-            originalAmount: tx.originalAmount,
-            originalCurrency: tx.originalCurrency,
-            exchangeRate: tx.exchangeRate,
-            type: tx.type,
-            updatedAt: new Date(),
-          })
-          .where(eq(transactions.id, compositeId));
-        updated++;
-      } else {
-        await db.insert(transactions).values({
-          id: compositeId,
-          profileId: 0, // PDFs don't have profile IDs
+        // Build the incoming fields object for comparison
+        const incomingFields = {
           date: tx.date,
           description: tx.description,
           merchant: tx.merchant,
@@ -78,7 +68,44 @@ export async function POST(request: Request) {
           originalCurrency: tx.originalCurrency,
           exchangeRate: tx.exchangeRate,
           type: tx.type,
-          category: null,
+        };
+
+        if (isTransactionIdentical(existing, incomingFields)) {
+          // Record is identical — skip the write to preserve user-modified category
+          skipped++;
+        } else {
+          await db
+            .update(transactions)
+            .set({
+              description: tx.description,
+              merchant: tx.merchant,
+              amount: tx.amount,
+              currency: tx.currency,
+              originalAmount: tx.originalAmount,
+              originalCurrency: tx.originalCurrency,
+              exchangeRate: tx.exchangeRate,
+              type: tx.type,
+              category: tx.type === 'CREDIT' ? 'Income' : existing.category,
+              updatedAt: new Date(),
+            })
+            .where(eq(transactions.id, compositeId));
+          updated++;
+        }
+      } else {
+        await db.insert(transactions).values({
+          id: compositeId,
+          profileId: 0,
+          userId,
+          date: tx.date,
+          description: tx.description,
+          merchant: tx.merchant,
+          amount: tx.amount,
+          currency: tx.currency,
+          originalAmount: tx.originalAmount,
+          originalCurrency: tx.originalCurrency,
+          exchangeRate: tx.exchangeRate,
+          type: tx.type,
+          category: tx.type === 'CREDIT' ? 'Income' : null,
           createdAt: new Date(),
           updatedAt: new Date(),
         });
@@ -91,6 +118,7 @@ export async function POST(request: Request) {
       bank: parsed.bank,
       inserted,
       updated,
+      skipped,
       total: parsed.transactions.length,
     });
   } catch (error) {
