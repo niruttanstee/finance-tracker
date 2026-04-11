@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
               originalCurrency: tx.originalCurrency,
               exchangeRate: tx.exchangeRate,
               type: tx.type,
-              category: tx.type === 'CREDIT' ? 'Income' : existing.category,
+              category: existing.category, // Preserve existing category
               updatedAt: new Date(),
             })
             .where(eq(transactions.id, compositeId));
