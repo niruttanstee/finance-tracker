@@ -1,6 +1,6 @@
 import { db } from './db';
 import { transactions, type Transaction } from './schema';
-import { eq, desc, gte, lte, and, sql } from 'drizzle-orm';
+import { eq, desc, gte, lte, and, sql, isNull } from 'drizzle-orm';
 import { recalculateNextMonthBudget } from './budgets';
 import { getCategoryByName } from './categories';
 
@@ -12,11 +12,12 @@ export interface TransactionFilters {
 }
 
 export async function getTransactions(
+  userId: string,
   filters?: TransactionFilters,
   limit = 100,
   offset = 0
 ): Promise<Transaction[]> {
-  const conditions = [];
+  const conditions = [eq(transactions.userId, userId)];
 
   if (filters?.startDate) {
     conditions.push(gte(transactions.date, filters.startDate));
@@ -31,7 +32,7 @@ export async function getTransactions(
     conditions.push(eq(transactions.type, filters.type));
   }
 
-  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+  const whereClause = and(...conditions);
 
   return db.query.transactions.findMany({
     where: whereClause,
@@ -49,11 +50,12 @@ export async function getTransactionById(id: string): Promise<Transaction | unde
 
 export async function updateTransactionCategory(
   id: string,
-  category: string | null
+  category: string | null,
+  userId: string
 ): Promise<void> {
-  // Get the transaction first to know its date and old category
+  // Get the transaction first to know its date and old category (and verify ownership)
   const transaction = await getTransactionById(id);
-  if (!transaction) {
+  if (!transaction || transaction.userId !== userId) {
     throw new Error('Transaction not found');
   }
 
@@ -61,26 +63,27 @@ export async function updateTransactionCategory(
   await db
     .update(transactions)
     .set({ category, updatedAt: new Date() })
-    .where(eq(transactions.id, id));
+    .where(and(eq(transactions.id, id), eq(transactions.userId, userId)));
 
   // Trigger recalculation for next month if the transaction has a category
   if (category) {
-    const categoryObj = await getCategoryByName(category);
+    const categoryObj = await getCategoryByName(category, userId);
     if (categoryObj) {
-      await recalculateNextMonthBudget(categoryObj.id, transaction.date);
+      await recalculateNextMonthBudget(categoryObj.id, transaction.date, userId);
     }
   }
-  
+
   // Also recalculate for the old category if there was one
   if (transaction.category) {
-    const oldCategoryObj = await getCategoryByName(transaction.category);
+    const oldCategoryObj = await getCategoryByName(transaction.category, userId);
     if (oldCategoryObj) {
-      await recalculateNextMonthBudget(oldCategoryObj.id, transaction.date);
+      await recalculateNextMonthBudget(oldCategoryObj.id, transaction.date, userId);
     }
   }
 }
 
 export async function getMonthlySpending(
+  userId: string,
   months = 6
 ): Promise<{ month: string; amount: number }[]> {
   const startDate = new Date();
@@ -92,7 +95,10 @@ export async function getMonthlySpending(
       amount: sql<number>`SUM(CASE WHEN ${transactions.type} = 'DEBIT' THEN ${transactions.amount} ELSE 0 END)`,
     })
     .from(transactions)
-    .where(gte(transactions.date, startDate))
+    .where(and(
+      eq(transactions.userId, userId),
+      gte(transactions.date, startDate)
+    ))
     .groupBy(sql`to_char(${transactions.date}, 'YYYY-MM')`)
     .orderBy(sql`to_char(${transactions.date}, 'YYYY-MM')`);
 
@@ -100,6 +106,7 @@ export async function getMonthlySpending(
 }
 
 export async function getCategoryBreakdown(
+  userId: string,
   startDate: Date,
   endDate: Date
 ): Promise<{ category: string; amount: number; color: string }[]> {
@@ -111,6 +118,7 @@ export async function getCategoryBreakdown(
     .from(transactions)
     .where(
       and(
+        eq(transactions.userId, userId),
         gte(transactions.date, startDate),
         lte(transactions.date, endDate),
         eq(transactions.type, 'DEBIT')
@@ -119,7 +127,9 @@ export async function getCategoryBreakdown(
     .groupBy(transactions.category);
 
   // Join with categories to get colors
-  const categoryList = await db.query.categories.findMany();
+  const categoryList = await db.query.categories.findMany({
+    where: eq(categories.userId, userId),
+  });
   const categoryMap = new Map(categoryList.map(c => [c.name, c.color]));
 
   return result.map(r => ({
@@ -129,11 +139,14 @@ export async function getCategoryBreakdown(
   }));
 }
 
-export async function getUncategorizedCount(): Promise<number> {
+export async function getUncategorizedCount(userId: string): Promise<number> {
   const result = await db
     .select({ count: sql<number>`COUNT(*)` })
     .from(transactions)
-    .where(eq(transactions.category, sql`NULL`));
+    .where(and(
+      eq(transactions.userId, userId),
+      isNull(transactions.category)
+    ));
 
   return result[0]?.count || 0;
 }
@@ -143,4 +156,38 @@ export function generateCompositeId(date: Date, merchant: string, amount: number
   const sanitizedMerchant = merchant.replace(/[^a-zA-Z0-9]/g, '_');
   const amountStr = amount.toFixed(2).replace('.', '_');
   return `${timestamp}_${sanitizedMerchant}_${amountStr}_${currency}`;
+}
+
+export interface IncomingTransactionFields {
+  date: Date;
+  description: string;
+  merchant: string;
+  amount: number;
+  currency: string;
+  originalAmount: number | null;
+  originalCurrency: string | null;
+  exchangeRate: number | null;
+  type: 'DEBIT' | 'CREDIT';
+}
+
+/**
+ * Returns true if all transaction fields (except category and updatedAt)
+ * are identical between the existing DB record and the incoming fields.
+ * Category is excluded because users manually set it.
+ */
+export function isTransactionIdentical(
+  existing: Transaction,
+  incoming: IncomingTransactionFields
+): boolean {
+  return (
+    existing.date.getTime() === incoming.date.getTime() &&
+    existing.description === incoming.description &&
+    existing.merchant === incoming.merchant &&
+    existing.amount === incoming.amount &&
+    existing.currency === incoming.currency &&
+    existing.originalAmount === incoming.originalAmount &&
+    existing.originalCurrency === incoming.originalCurrency &&
+    existing.exchangeRate === incoming.exchangeRate &&
+    existing.type === incoming.type
+  );
 }
