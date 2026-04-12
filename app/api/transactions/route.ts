@@ -16,12 +16,16 @@ export async function GET(request: Request) {
       type: (searchParams.get('type') as 'DEBIT' | 'CREDIT') || undefined,
     };
 
-    const limit = parseInt(searchParams.get('limit') || '100');
+    const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
+    const page = Math.floor(offset / limit) + 1;
 
-    const data = await getTransactions(filters, limit, offset);
-    
-    return NextResponse.json({ data });
+    // TODO: Get userId from auth session
+    const userId = 'current-user';
+    const { transactions, total } = await getTransactions(userId, filters, limit, offset);
+    const totalPages = Math.ceil(total / limit);
+
+    return NextResponse.json({ data: transactions, total, page, limit, totalPages });
   } catch (error) {
     console.error('Error fetching transactions:', error);
     return NextResponse.json(

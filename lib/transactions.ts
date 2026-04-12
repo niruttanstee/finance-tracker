@@ -11,12 +11,17 @@ export interface TransactionFilters {
   type?: 'DEBIT' | 'CREDIT';
 }
 
+export interface PaginatedTransactions {
+  transactions: Transaction[];
+  total: number;
+}
+
 export async function getTransactions(
   userId: string,
   filters?: TransactionFilters,
-  limit = 100,
+  limit = 50,
   offset = 0
-): Promise<Transaction[]> {
+): Promise<PaginatedTransactions> {
   const conditions = [eq(transactions.userId, userId)];
 
   if (filters?.startDate) {
@@ -34,12 +39,20 @@ export async function getTransactions(
 
   const whereClause = and(...conditions);
 
-  return db.query.transactions.findMany({
-    where: whereClause,
-    orderBy: [desc(transactions.date)],
-    limit,
-    offset,
-  });
+  const [data, countResult] = await Promise.all([
+    db.query.transactions.findMany({
+      where: whereClause,
+      orderBy: [desc(transactions.date)],
+      limit,
+      offset,
+    }),
+    db.select({ count: sql<number>`count(*)` }).from(transactions).where(whereClause),
+  ]);
+
+  return {
+    transactions: data,
+    total: countResult[0]?.count || 0,
+  };
 }
 
 export async function getTransactionById(id: string): Promise<Transaction | undefined> {

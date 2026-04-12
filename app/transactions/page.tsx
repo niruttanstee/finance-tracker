@@ -3,6 +3,15 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TransactionList } from '../components/transactions/TransactionList';
 import Link from 'next/link';
@@ -32,15 +41,25 @@ export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [currentPage]);
 
   async function fetchData() {
     try {
+      const offset = (currentPage - 1) * 50;
+      const params = new URLSearchParams({
+        page: String(currentPage),
+        limit: '50',
+        offset: String(offset),
+      });
+
       const [transactionsRes, categoriesRes] = await Promise.all([
-        fetch('/api/transactions'),
+        fetch(`/api/transactions?${params}`),
         fetch('/api/categories'),
       ]);
 
@@ -48,6 +67,8 @@ export default function TransactionsPage() {
       const categoriesData = await categoriesRes.json();
 
       setTransactions(transactionsData.data || []);
+      setTotalPages(transactionsData.totalPages || 1);
+      setTotal(transactionsData.total || 0);
       setCategories(categoriesData.data || []);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -55,6 +76,7 @@ export default function TransactionsPage() {
       setLoading(false);
     }
   }
+
 
   async function handleCategoryChange(transactionId: string, category: string | undefined) {
     try {
@@ -106,7 +128,7 @@ export default function TransactionsPage() {
         <div>
           <h1 className="text-3xl font-bold">Transactions</h1>
           <p className="text-muted-foreground">
-            {transactions.length} total transactions
+            {total} total transactions
           </p>
         </div>
       </div>
@@ -116,11 +138,45 @@ export default function TransactionsPage() {
           <CardTitle>All Transactions</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="mb-4">
+            <span className="text-sm text-muted-foreground">
+              Page {currentPage} of {totalPages} ({total} total)
+            </span>
+          </div>
+
           <TransactionList
             transactions={transactions}
             categories={categories}
             onCategoryChange={handleCategoryChange}
           />
+
+          <Pagination className="mt-4">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                />
+              </PaginationItem>
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(page => (
+                <PaginationItem key={page}>
+                  <PaginationLink
+                    isActive={page === currentPage}
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              {totalPages > 5 && <PaginationEllipsis />}
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </CardContent>
       </Card>
     </main>
