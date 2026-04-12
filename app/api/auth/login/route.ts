@@ -4,6 +4,7 @@ import { users, sessions } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { verifyPassword } from '@/lib/auth/password';
 import { generateSessionId, signSession, COOKIE_NAME } from '@/lib/auth/session';
+import { seedDefaultCategories } from '@/lib/categories';
 
 const SESSION_DURATION_DAYS = 30;
 
@@ -46,7 +47,10 @@ export async function POST(request: NextRequest) {
     createdAt: new Date(),
   });
 
-  const cookieValue = signSession(sessionId);
+  // Seed default categories for new users
+  await seedDefaultCategories(user.id);
+
+  const cookieValue = await signSession(sessionId);
   const response = NextResponse.json({ user: { id: user.id, username: user.username, role: user.role } });
   response.cookies.set(COOKIE_NAME, cookieValue, {
     httpOnly: true,

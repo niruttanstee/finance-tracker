@@ -16,9 +16,12 @@ export async function GET(request: Request) {
       type: (searchParams.get('type') as 'DEBIT' | 'CREDIT') || undefined,
     };
 
+    const pageParam = searchParams.get('page');
+    const offsetParam = searchParams.get('offset');
+
     const limit = parseInt(searchParams.get('limit') || '50');
-    const offset = parseInt(searchParams.get('offset') || '0');
-    const page = Math.floor(offset / limit) + 1;
+    const page = pageParam ? parseInt(pageParam) : 1;
+    const offset = offsetParam ? parseInt(offsetParam) : (page - 1) * limit;
 
     // TODO: Get userId from auth session
     const userId = 'current-user';

@@ -27,6 +27,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<{ name: string; color: string }[]>([]);
   const [hasWiseToken, setHasWiseToken] = useState(false);
+  const [syncKey, setSyncKey] = useState(0);
 
   const selectedMonth = searchParams.get('month') || format(new Date(), 'yyyy-MM');
   
@@ -38,12 +39,25 @@ export default function DashboardPage() {
           fetch(`/api/dashboard?month=${selectedMonth}`),
           fetch('/api/categories'),
         ]);
+
+        // Redirect to login if not authenticated
+        if (dashboardResponse.status === 401) {
+          router.push('/login');
+          return;
+        }
+
         const dashboardData = await dashboardResponse.json();
         const categoriesData = await categoriesResponse.json();
         const settingsResponse = await fetch('/api/settings');
         const settingsData = await settingsResponse.json();
-        setData(dashboardData);
-        setCategories(categoriesData.map((c: { name: string; color: string }) => ({ name: c.name, color: c.color })));
+
+        // Only set data if it's a valid response (not an error)
+        if (dashboardData && !dashboardData.error) {
+          setData(dashboardData);
+        }
+        if (categoriesData?.data && !categoriesData.error) {
+          setCategories(categoriesData.data.map((c: { name: string; color: string }) => ({ name: c.name, color: c.color })));
+        }
         setHasWiseToken(settingsData.data?.apiProvider === 'wise' && !!settingsData.data?.apiKey);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
@@ -51,9 +65,9 @@ export default function DashboardPage() {
         setLoading(false);
       }
     }
-    
+
     fetchData();
-  }, [selectedMonth]);
+  }, [selectedMonth, syncKey]);
   
   function navigateMonth(direction: 'prev' | 'next') {
     const [year, month] = selectedMonth.split('-').map(Number);
@@ -106,7 +120,7 @@ export default function DashboardPage() {
             Track your spending and manage your finances
           </p>
         </div>
-        <SyncButton mode={hasWiseToken ? 'wise' : 'upload'} />
+        <SyncButton mode={hasWiseToken ? 'wise' : 'upload'} onSync={() => setSyncKey(k => k + 1)} />
       </div>
 
       {/* Month Navigation - Budget Page Style */}
@@ -142,7 +156,7 @@ export default function DashboardPage() {
               RM {data.availableFunds.toFixed(2)}
             </div>
             <p className="text-xs text-muted-foreground">
-              Current balance
+              Income minus spending
             </p>
           </CardContent>
         </Card>
@@ -176,7 +190,7 @@ export default function DashboardPage() {
               RM {data.savings.toFixed(2)}
             </div>
             <p className="text-xs text-muted-foreground">
-              Income minus spending
+              Saved this month
             </p>
           </CardContent>
         </Card>

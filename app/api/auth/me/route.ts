@@ -4,7 +4,7 @@ import { users } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
-  const userId = request.headers.get('x-user-id');
+  const userId = await getUserIdFromRequest(request);
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

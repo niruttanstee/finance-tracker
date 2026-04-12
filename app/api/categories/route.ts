@@ -1,10 +1,16 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getAllCategories, createCategory, updateCategory, deleteCategory, updateCategoryDefaultBudget } from '@/lib/categories';
 import { recalculateAllBudgets } from '@/lib/budgets';
+import { getUserIdFromRequest } from '@/lib/auth/api';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const userId = await getUserIdFromRequest(request);
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
-    const categories = await getAllCategories();
+    const categories = await getAllCategories(userId);
     return NextResponse.json({ data: categories });
   } catch (error) {
     console.error('Error fetching categories:', error);
@@ -15,25 +21,30 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const userId = await getUserIdFromRequest(request);
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { name, color, defaultBudget = 0, noRollover = false } = body;
-    
+
     if (!name || !color) {
       return NextResponse.json(
         { error: 'Name and color are required' },
         { status: 400 }
       );
     }
-    
-    const category = await createCategory(name, color, noRollover);
-    
+
+    const category = await createCategory(name, color, noRollover, userId);
+
     // Set default budget if provided
     if (defaultBudget > 0) {
-      await updateCategoryDefaultBudget(category.id, defaultBudget);
+      await updateCategoryDefaultBudget(category.id, defaultBudget, userId);
     }
-    
+
     return NextResponse.json({ data: category }, { status: 201 });
   } catch (error) {
     console.error('Error creating category:', error);
@@ -44,41 +55,46 @@ export async function POST(request: Request) {
   }
 }
 
-export async function PUT(request: Request) {
+export async function PUT(request: NextRequest) {
+  const userId = await getUserIdFromRequest(request);
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { id, name, color, defaultBudget, noRollover } = body;
-    
+
     if (!id) {
       return NextResponse.json(
         { error: 'ID is required' },
         { status: 400 }
       );
     }
-    
+
     let category;
-    
+
     // Update name/color/noRollover if provided
     if (name && color) {
-      category = await updateCategory(id, name, color, noRollover);
+      category = await updateCategory(id, name, color, noRollover, userId);
     } else if (typeof noRollover !== 'undefined') {
       // Just update noRollover if that's all that's being changed
-      category = await updateCategory(id, '', '', noRollover);
+      category = await updateCategory(id, '', '', noRollover, userId);
     }
-    
+
     // Update default budget if provided and trigger cascade
     if (typeof defaultBudget === 'number' && defaultBudget >= 0) {
-      category = await updateCategoryDefaultBudget(id, defaultBudget);
-      
+      category = await updateCategoryDefaultBudget(id, defaultBudget, userId);
+
       // Trigger cascade recalculation for all months
-      const monthsUpdated = await recalculateAllBudgets(id);
-      
-      return NextResponse.json({ 
+      const monthsUpdated = await recalculateAllBudgets(id, userId);
+
+      return NextResponse.json({
         data: category,
         cascadeUpdated: monthsUpdated
       });
     }
-    
+
     return NextResponse.json({ data: category });
   } catch (error) {
     console.error('Error updating category:', error);
@@ -89,19 +105,24 @@ export async function PUT(request: Request) {
   }
 }
 
-export async function DELETE(request: Request) {
+export async function DELETE(request: NextRequest) {
+  const userId = await getUserIdFromRequest(request);
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    
+
     if (!id) {
       return NextResponse.json(
         { error: 'Category ID is required' },
         { status: 400 }
       );
     }
-    
-    await deleteCategory(id);
+
+    await deleteCategory(id, userId);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting category:', error);

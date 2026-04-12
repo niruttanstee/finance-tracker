@@ -1,8 +1,19 @@
+'use client';
+
 import Link from 'next/link';
 import { Wallet } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 
 export function Navigation() {
+  async function handleLogout() {
+    try {
+      await fetch('/api/auth/logout', { method: 'DELETE' });
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  }
+
   return (
     <nav className="border-b bg-background">
       <div className="container mx-auto px-4 py-4">
@@ -29,6 +40,9 @@ export function Navigation() {
               Settings
             </Link>
             <ThemeToggle />
+            <button onClick={handleLogout} className="text-sm hover:text-primary">
+              Logout
+            </button>
           </div>
         </div>
       </div>

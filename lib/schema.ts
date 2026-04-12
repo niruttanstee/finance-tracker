@@ -1,4 +1,4 @@
-import { pgTable, text, integer, real, timestamp, primaryKey } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, real, timestamp, primaryKey, boolean } from 'drizzle-orm/pg-core';
 
 export const transactions = pgTable('transactions', {
   id: text('id').primaryKey(),
@@ -19,23 +19,25 @@ export const transactions = pgTable('transactions', {
 });
 
 export const categories = pgTable('categories', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull().unique(),
+  id: text('id').notNull(),
+  name: text('name').notNull(),
   color: text('color').notNull(),
-  isDefault: integer('is_default', { mode: 'boolean' }).notNull().default(false),
+  isDefault: boolean('is_default').notNull().default(false),
   defaultBudget: real('default_budget').notNull().default(0),
-  noRollover: integer('no_rollover', { mode: 'boolean' }).notNull().default(false),
-  userId: text('user_id').notNull().default(''),
-});
+  noRollover: boolean('no_rollover').notNull().default(false),
+  userId: text('user_id').notNull(),
+}, (table) => ({
+  pk: primaryKey([table.id, table.userId]),
+}));
 
 export const categoryBudgets = pgTable('category_budgets', {
   id: text('id').primaryKey(), // composite: categoryId_yearMonth
-  categoryId: text('category_id').notNull().references(() => categories.id),
+  categoryId: text('category_id').notNull(),
   yearMonth: text('year_month', { length: 7 }).notNull(), // YYYY-MM format
   monthlyLimit: real('monthly_limit').notNull().default(0),
   createdAt: timestamp('created_at').notNull(),
   updatedAt: timestamp('updated_at').notNull(),
-  userId: text('user_id').notNull().default(''),
+  userId: text('user_id').notNull(),
 });
 
 export const settings = pgTable('settings', {

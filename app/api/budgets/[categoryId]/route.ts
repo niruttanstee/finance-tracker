@@ -1,12 +1,18 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getBudgetForCategory, updateBudgetLimit } from '@/lib/budgets';
+import { getUserIdFromRequest } from '@/lib/auth/api';
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { categoryId: string } }
 ) {
   try {
-    const { searchParams } = new URL(request.url);
+    const userId = await getUserIdFromRequest(request);
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = request.nextUrl;
     const yearMonth = searchParams.get('yearMonth');
 
     if (!yearMonth || !/^\d{4}-\d{2}$/.test(yearMonth)) {
@@ -16,7 +22,7 @@ export async function GET(
       );
     }
 
-    const budget = await getBudgetForCategory(params.categoryId, yearMonth);
+    const budget = await getBudgetForCategory(params.categoryId, yearMonth, userId);
 
     if (!budget) {
       return NextResponse.json(
@@ -36,10 +42,15 @@ export async function GET(
 }
 
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { categoryId: string } }
 ) {
   try {
+    const userId = await getUserIdFromRequest(request);
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { yearMonth, monthlyLimit } = await request.json();
 
     if (!yearMonth || typeof monthlyLimit !== 'number') {
@@ -63,7 +74,7 @@ export async function PATCH(
       );
     }
 
-    const budget = await updateBudgetLimit(params.categoryId, yearMonth, monthlyLimit);
+    const budget = await updateBudgetLimit(params.categoryId, yearMonth, monthlyLimit, userId);
 
     return NextResponse.json({ data: budget });
   } catch (error) {

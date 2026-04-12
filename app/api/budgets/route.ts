@@ -1,16 +1,22 @@
-import { NextResponse } from 'next/server';
-import { 
-  getBudgetsWithSpending, 
-  updateBudgetLimit, 
+import { NextRequest, NextResponse } from 'next/server';
+import {
+  getBudgetsWithSpending,
+  updateBudgetLimit,
   cascadeRecalculateFromMonth,
   getOrCreateBudgetWithRollover,
   getNextYearMonth
 } from '@/lib/budgets';
 import { updateCategoryDefaultBudget } from '@/lib/categories';
+import { getUserIdFromRequest } from '@/lib/auth/api';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    const userId = await getUserIdFromRequest(request);
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = request.nextUrl;
     const yearMonth = searchParams.get('yearMonth');
 
     if (!yearMonth || !/^\d{4}-\d{2}$/.test(yearMonth)) {
@@ -20,7 +26,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const budgets = await getBudgetsWithSpending(yearMonth);
+    const budgets = await getBudgetsWithSpending(yearMonth, userId);
 
     return NextResponse.json({ data: budgets });
   } catch (error) {
@@ -32,8 +38,13 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    const userId = await getUserIdFromRequest(request);
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { categoryId, yearMonth, monthlyLimit, updateDefault = true } = body;
 
@@ -59,18 +70,18 @@ export async function POST(request: Request) {
     }
 
     // Update this month's budget
-    const budget = await updateBudgetLimit(categoryId, yearMonth, monthlyLimit);
+    const budget = await updateBudgetLimit(categoryId, yearMonth, monthlyLimit, userId);
 
     // Update category's default budget if requested (manual edit = new default)
     if (updateDefault) {
-      await updateCategoryDefaultBudget(categoryId, monthlyLimit);
+      await updateCategoryDefaultBudget(categoryId, monthlyLimit, userId);
     }
 
     // Cascade recalculate all future months
     const nextMonth = getNextYearMonth(yearMonth);
-    const monthsUpdated = await cascadeRecalculateFromMonth(categoryId, nextMonth);
+    const monthsUpdated = await cascadeRecalculateFromMonth(categoryId, nextMonth, userId);
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       data: budget,
       cascadeUpdated: monthsUpdated
     });

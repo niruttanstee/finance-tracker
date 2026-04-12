@@ -16,10 +16,15 @@ export interface PaginatedTransactions {
   total: number;
 }
 
+export interface PaginatedTransactions {
+  transactions: Transaction[];
+  total: number;
+}
+
 export async function getTransactions(
   userId: string,
   filters?: TransactionFilters,
-  limit = 50,
+  limit = 100,
   offset = 0
 ): Promise<PaginatedTransactions> {
   const conditions = [eq(transactions.userId, userId)];

@@ -7,7 +7,7 @@ import { verifySessionCookie, COOKIE_NAME } from '@/lib/auth/session';
 export async function DELETE(request: NextRequest) {
   const cookieValue = request.cookies.get(COOKIE_NAME)?.value;
   if (cookieValue) {
-    const sessionId = verifySessionCookie(cookieValue);
+    const sessionId = await verifySessionCookie(cookieValue);
     if (sessionId) {
       await db.delete(sessions).where(eq(sessions.id, sessionId));
     }

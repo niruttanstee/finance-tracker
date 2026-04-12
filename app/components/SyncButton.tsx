@@ -36,7 +36,6 @@ export function SyncButton({ mode, onSync }: SyncButtonProps) {
       if (response.ok) {
         setResult({ success: true, inserted: data.inserted, updated: data.updated, total: data.unique });
         setLastSync(new Date());
-        router.refresh();
         onSync?.();
       } else {
         setResult({ success: false, error: data.error || 'Sync failed' });
