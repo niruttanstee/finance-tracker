@@ -1,7 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getTransactions, updateTransactionCategory } from '@/lib/transactions';
+import { getUserIdFromRequest } from '@/lib/auth/api';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const userId = await getUserIdFromRequest(request);
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     
@@ -23,8 +29,6 @@ export async function GET(request: Request) {
     const page = pageParam ? parseInt(pageParam) : 1;
     const offset = offsetParam ? parseInt(offsetParam) : (page - 1) * limit;
 
-    // TODO: Get userId from auth session
-    const userId = 'current-user';
     const { transactions, total } = await getTransactions(userId, filters, limit, offset);
     const totalPages = Math.ceil(total / limit);
 
@@ -38,10 +42,15 @@ export async function GET(request: Request) {
   }
 }
 
-export async function PATCH(request: Request) {
+export async function PATCH(request: NextRequest) {
+  const userId = await getUserIdFromRequest(request);
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const { id, category } = await request.json();
-    
+
     if (!id) {
       return NextResponse.json(
         { error: 'Transaction ID required' },
@@ -49,8 +58,8 @@ export async function PATCH(request: Request) {
       );
     }
 
-    await updateTransactionCategory(id, category);
-    
+    await updateTransactionCategory(id, category, userId);
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error updating transaction:', error);
