@@ -193,7 +193,7 @@ export function CategoryManager() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Categories</CardTitle>
-        <Button onClick={openAddDialog} size="sm">
+        <Button variant="outline" onClick={openAddDialog}>
           <Plus className="mr-2 h-4 w-4" />
           Add Category
         </Button>
