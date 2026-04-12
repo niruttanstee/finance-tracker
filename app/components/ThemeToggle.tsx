@@ -16,7 +16,6 @@ export function ThemeToggle({ variant = 'ghost' }: ThemeToggleProps) {
       variant={variant}
       size="icon"
       onClick={toggleTheme}
-      className="h-9 w-9"
       aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
     >
       {theme === 'light' ? (
