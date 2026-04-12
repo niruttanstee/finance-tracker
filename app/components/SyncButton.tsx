@@ -3,16 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Upload, FileText } from 'lucide-react';
-
-interface SyncResult {
-  success: boolean;
-  inserted?: number;
-  updated?: number;
-  total?: number;
-  bank?: string;
-  error?: string;
-}
+import { RefreshCw, Upload } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface SyncButtonProps {
   mode: 'wise' | 'upload';
@@ -22,26 +14,26 @@ interface SyncButtonProps {
 export function SyncButton({ mode, onSync }: SyncButtonProps) {
   const [isActive, setIsActive] = useState(false);
   const [lastSync, setLastSync] = useState<Date | null>(null);
-  const [result, setResult] = useState<SyncResult | null>(null);
   const router = useRouter();
 
   async function handleWiseSync() {
     setIsActive(true);
-    setResult(null);
 
     try {
       const response = await fetch('/api/sync', { method: 'POST' });
       const data = await response.json();
 
       if (response.ok) {
-        setResult({ success: true, inserted: data.inserted, updated: data.updated, total: data.unique });
         setLastSync(new Date());
         onSync?.();
+        toast.success(
+          `Synced successfully: ${data.inserted ?? 0} new, ${data.updated ?? 0} updated`
+        );
       } else {
-        setResult({ success: false, error: data.error || 'Sync failed' });
+        toast.error(data.error || 'Sync failed');
       }
     } catch {
-      setResult({ success: false, error: 'Network error. Please try again.' });
+      toast.error('Network error. Please try again.');
     } finally {
       setIsActive(false);
     }
@@ -56,7 +48,6 @@ export function SyncButton({ mode, onSync }: SyncButtonProps) {
       if (!file) return;
 
       setIsActive(true);
-      setResult(null);
 
       const formData = new FormData();
       formData.append('file', file);
@@ -66,21 +57,17 @@ export function SyncButton({ mode, onSync }: SyncButtonProps) {
         const data = await response.json();
 
         if (response.ok) {
-          setResult({
-            success: true,
-            inserted: data.inserted,
-            updated: data.updated,
-            total: data.total,
-            bank: data.bank,
-          });
           setLastSync(new Date());
           router.refresh();
           onSync?.();
+          toast.success(
+            `${data.bank}: ${data.total} transactions (${data.inserted} new, ${data.updated} updated)`
+          );
         } else {
-          setResult({ success: false, error: data.error || 'Import failed' });
+          toast.error(data.error || 'Import failed');
         }
       } catch {
-        setResult({ success: false, error: 'Network error. Please try again.' });
+        toast.error('Network error. Please try again.');
       } finally {
         setIsActive(false);
       }
@@ -97,33 +84,16 @@ export function SyncButton({ mode, onSync }: SyncButtonProps) {
         </Button>
       ) : (
         <Button onClick={handleFileUpload} disabled={isActive} className="w-full">
-          <Upload className={`mr-2 h-4 w-4 ${isActive ? 'animate-spin' : ''}`} />
+          <Upload className="mr-2 h-4 w-4" />
           {isActive ? 'Importing...' : 'Upload Statement'}
         </Button>
       )}
 
       {lastSync && (
         <p className="text-sm text-muted-foreground text-center">
-          {mode === 'wise' ? 'Last synced: ' : 'Last import: '}{lastSync.toLocaleString()}
+          {mode === 'wise' ? 'Last synced: ' : 'Last import: '}
+          {lastSync.toLocaleString()}
         </p>
-      )}
-
-      {result && (
-        <div className={`text-sm text-center p-2 rounded ${
-          result.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-        }`}>
-          {result.success ? (
-            <>
-              <FileText className="inline mr-1 h-4 w-4" />
-              {result.bank ? `${result.bank}: ` : ''}
-              {result.total} transaction{result.total !== 1 ? 's' : ''}
-              {result.inserted ? ` (${result.inserted} new)` : ''}
-              {result.updated ? ` (${result.updated} updated)` : ''}
-            </>
-          ) : (
-            <>❌ {result.error}</>
-          )}
-        </div>
       )}
     </div>
   );
