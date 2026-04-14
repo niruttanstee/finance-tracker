@@ -32,20 +32,56 @@ Finance app routes are organized under a **route group** `(finance)` so the URL 
 
 ```
 app/
-  page.tsx                  # Launcher homepage
+  page.tsx                          # Launcher homepage
   (finance)/
-    layout.tsx               # Finance layout (back button header)
-    transactions/page.tsx   # → /finance/transactions
-    budgets/page.tsx        # → /finance/budgets
-    page.tsx                # → /finance
+    layout.tsx                     # Finance layout (back button header)
+    transactions/page.tsx          # → /finance/transactions
+    budgets/page.tsx               # → /finance/budgets
+    settings/page.tsx              # → /finance/settings
+    page.tsx                       # → /finance
   (notes)/
     ...
-  layout.tsx                 # Root layout (auth, providers)
+  layout.tsx                       # Root layout (auth, providers)
+  login/page.tsx                   # → /login (existing, kept)
 ```
 
-### 2.3 App Config File
+### 2.3 Full Route Map
 
-Apps are registered in `lib/platform/apps.ts` — a hardcoded array of app definitions:
+**Launcher (public):**
+| Route | Purpose |
+|-------|---------|
+| `/` | Launcher homepage (app icon grid) — no auth required |
+
+**Finance App (auth required):**
+| Route | Purpose |
+|-------|---------|
+| `/finance` | Finance dashboard |
+| `/finance/transactions` | Transaction list |
+| `/finance/budgets` | Budget view |
+| `/finance/settings` | Settings |
+
+**API (shared, auth required):**
+| Route | Purpose |
+|-------|---------|
+| `/api/auth/login` | POST login |
+| `/api/auth/logout` | POST logout |
+| `/api/auth/me` | GET current user |
+| `/api/transactions` | GET/PATCH transactions |
+| `/api/categories` | GET/PATCH categories |
+| `/api/balance` | GET balance |
+| `/api/budgets` | GET/PATCH budgets |
+| `/api/budgets/[categoryId]` | PATCH single budget |
+| `/api/dashboard` | GET dashboard data |
+| `/api/import` | POST import |
+| `/api/settings` | GET/PATCH settings |
+| `/api/sync` | POST Wise sync |
+
+**Auth:**
+| Route | Purpose |
+|-------|---------|
+| `/login` | Login page (existing, kept) |
+
+### 2.4 App Config File
 
 ```typescript
 export const platformApps = [
@@ -62,7 +98,7 @@ export const platformApps = [
 
 The launcher homepage reads `platformApps` to render the icon grid. No runtime DB lookup.
 
-### 2.4 Database Schema
+### 2.5 Database Schema
 
 **Shared PostgreSQL database with per-app schemas** using Drizzle ORM.
 
@@ -70,13 +106,14 @@ The launcher homepage reads `platformApps` to render the icon grid. No runtime D
 - Auth/users table lives in `public` schema (shared across all apps)
 - Drizzle config uses schema folders: `drizzle/finance/`, `drizzle/notes/`
 
-### 2.5 Authentication
+### 2.6 Authentication
 
 - Uses existing `users` table from the finance tracker
-- Browser **HTTP Basic Auth popup** (native browser dialog) for login
+- Login via existing `/login` page — user submits credentials, session cookie is set
 - Session cookie set at **root domain level** (`.example.com` or `localhost`) so it's shared across all apps
-- Middleware checks for valid session cookie on all protected routes
-- Unauthenticated users see the launcher homepage but are prompted to authenticate when clicking an app
+- Middleware checks for valid session cookie on all `/finance/*` routes
+- Unauthenticated users visiting `/finance/*` are redirected to `/login`
+- On successful login, user is redirected to the originally requested `/finance/*` page
 
 ---
 
@@ -172,7 +209,7 @@ No code changes to the launcher itself.
 |---------|--------|
 | Framework | Next.js 14 (App Router) — existing |
 | UI Library | shadcn/ui components + Tailwind CSS |
-| Auth | HTTP Basic Auth popup + session cookie |
+| Auth | Login page (`/login`) + session cookie |
 | Database | PostgreSQL + Drizzle ORM — existing |
 | App icons | Custom SVG components |
 | App config | Hardcoded JS array in `lib/platform/apps.ts` |
@@ -182,7 +219,6 @@ No code changes to the launcher itself.
 
 ## 8. What's Out of Scope
 
-- Login/signup page (HTTP Basic Auth popup is the login)
 - Admin UI for managing apps
 - Per-app user permissions (all authed users can access all apps)
 - App marketplace or discovery
