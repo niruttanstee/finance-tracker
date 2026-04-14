@@ -66,12 +66,14 @@ export async function getDashboardData(monthStr: string, userId: string): Promis
     return monthData;
   });
 
-  // Calculate current month spending
-  const currentMonthSpending = categoryTrendData
-    .filter(d => d.month === monthStr)
+  // Calculate current month spending and savings from categoryTrendData (already fetched)
+  const currentMonthTrend = categoryTrendData.filter(d => d.month === monthStr);
+  const currentMonthSpending = currentMonthTrend.reduce((sum, d) => sum + d.amount, 0);
+  const savings = currentMonthTrend
+    .filter(d => d.category === 'Savings')
     .reduce((sum, d) => sum + d.amount, 0);
 
-  // Calculate current month income
+  // Calculate current month income (separate query - different type filter)
   const incomeData = await db
     .select({
       amount: sql<number>`SUM(${transactions.amount})`,
@@ -88,23 +90,6 @@ export async function getDashboardData(monthStr: string, userId: string): Promis
 
   const income = incomeData[0]?.amount || 0;
   const availableFunds = income - currentMonthSpending;
-
-  // Calculate savings (total Savings category transactions) for current month
-  const savingsData = await db
-    .select({
-      amount: sql<number>`SUM(${transactions.amount})`,
-    })
-    .from(transactions)
-    .where(
-      and(
-        eq(transactions.userId, userId),
-        gte(transactions.date, monthStart),
-        lte(transactions.date, monthEnd),
-        eq(transactions.category, 'Savings')
-      )
-    );
-
-  const savings = savingsData[0]?.amount || 0;
 
   // Category breakdown for current month
   const categoryData = await db
