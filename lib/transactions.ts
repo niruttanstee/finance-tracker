@@ -1,5 +1,5 @@
 import { db } from './db';
-import { transactions, type Transaction } from './schema';
+import { transactions, categories, type Transaction } from './schema';
 import { eq, desc, gte, lte, and, sql, isNull } from 'drizzle-orm';
 import { recalculateNextMonthBudget } from './budgets';
 import { getCategoryByName } from './categories';

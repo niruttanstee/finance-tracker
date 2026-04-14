@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createWiseClient } from '@/lib/wise';
 import { db } from '@/lib/db';
 import { eq, and } from 'drizzle-orm';
@@ -20,10 +20,10 @@ async function convertToMYR(
   amount: number,
   fromCurrency: string
 ): Promise<{ myrAmount: number; rate: number }> {
-  if (fromCurrency === 'MYR') {
+  if (fromCurrency === 'MYR' || !client) {
     return { myrAmount: amount, rate: 1 };
   }
-  
+
   const rate = await client.getExchangeRate(fromCurrency, 'MYR');
   return { myrAmount: amount * rate, rate };
 }
@@ -107,8 +107,8 @@ async function parseStatementTransaction(
   };
 }
 
-export async function POST(request: Request) {
-  const userId = await getUserIdFromRequest(request as any);
+export async function POST(request: NextRequest) {
+  const userId = await getUserIdFromRequest(request);
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -157,7 +157,7 @@ export async function POST(request: Request) {
     // Get balances for the profile
     const balances = await client.getBalances(personalProfile.id);
     console.log('Balances found:', balances.length);
-    console.log('Balance details:', balances.map(b => ({ id: b.id, currency: b.currency, amount: b.amount, type: (b as any).type })));
+    console.log('Balance details:', balances.map(b => ({ id: b.id, currency: b.currency, amount: b.amount, type: b.type })));
 
     if (balances.length === 0) {
       return NextResponse.json(

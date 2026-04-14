@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,11 +29,7 @@ export default function BudgetsPage() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
 
-  useEffect(() => {
-    fetchBudgets();
-  }, [currentYearMonth]);
-
-  async function fetchBudgets() {
+  const fetchBudgets = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/budgets?yearMonth=${currentYearMonth}`);
@@ -44,7 +40,11 @@ export default function BudgetsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [currentYearMonth]);
+
+  useEffect(() => {
+    fetchBudgets();
+  }, [fetchBudgets]);
 
   function navigateMonth(direction: 'prev' | 'next') {
     const [year, month] = currentYearMonth.split('-').map(Number);

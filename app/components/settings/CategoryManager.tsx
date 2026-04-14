@@ -31,10 +31,6 @@ export function CategoryManager() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [formData, setFormData] = useState<CategoryFormData>({ name: '', color: '#3b82f6', defaultBudget: 0, noRollover: false });
-  const [currentYearMonth] = useState(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  });
 
   // Budget dialog state
   const [isBudgetDialogOpen, setIsBudgetDialogOpen] = useState(false);

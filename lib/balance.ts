@@ -11,7 +11,7 @@ export async function getCurrentBalance(userId?: string): Promise<{ balance: num
       const userSettings = await db.query.settings.findFirst({
         where: and(eq(settings.id, 'app_settings'), eq(settings.userId, userId)),
       });
-      token = userSettings?.apiKey;
+      token = userSettings?.apiKey ?? undefined;
     }
 
     const client = createWiseClient(token);

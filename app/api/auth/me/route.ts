@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { users } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
+import { getUserIdFromRequest } from '@/lib/auth/api';
 
 export async function GET(request: NextRequest) {
   const userId = await getUserIdFromRequest(request);

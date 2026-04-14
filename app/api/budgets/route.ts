@@ -3,7 +3,6 @@ import {
   getBudgetsWithSpending,
   updateBudgetLimit,
   cascadeRecalculateFromMonth,
-  getOrCreateBudgetWithRollover,
   getNextYearMonth
 } from '@/lib/budgets';
 import { updateCategoryDefaultBudget } from '@/lib/categories';

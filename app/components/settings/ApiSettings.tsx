@@ -12,7 +12,6 @@ interface ApiSettings {
 }
 
 export function ApiSettings() {
-  const [settings, setSettings] = useState<ApiSettings>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showToken, setShowToken] = useState(false);
@@ -23,7 +22,6 @@ export function ApiSettings() {
     fetch('/api/settings')
       .then(res => res.json())
       .then(data => {
-        setSettings(data.data || {});
         setToken(data.data?.apiKey || '');
       })
       .catch(console.error)
@@ -41,7 +39,6 @@ export function ApiSettings() {
       });
       if (res.ok) {
         setMessage({ type: 'success', text: 'API settings saved.' });
-        setSettings({ apiProvider: token ? 'wise' : null, apiKey: token || null });
       } else {
         setMessage({ type: 'error', text: 'Failed to save settings.' });
       }

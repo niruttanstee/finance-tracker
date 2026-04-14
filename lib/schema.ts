@@ -8,9 +8,9 @@ export const transactions = pgTable('transactions', {
   description: text('description').notNull(),
   merchant: text('merchant').notNull(),
   amount: real('amount').notNull(), // Now always in MYR
-  currency: text('currency', { length: 3 }).notNull().default('MYR'), // Always MYR
+  currency: text('currency').notNull().default('MYR'), // Always MYR
   originalAmount: real('original_amount'), // Amount in source currency
-  originalCurrency: text('original_currency', { length: 3 }), // Source currency code
+  originalCurrency: text('original_currency'), // Source currency code
   exchangeRate: real('exchange_rate'), // Rate used for conversion
   type: text('type', { enum: ['DEBIT', 'CREDIT'] }).notNull(),
   category: text('category'),
@@ -27,13 +27,13 @@ export const categories = pgTable('categories', {
   noRollover: boolean('no_rollover').notNull().default(false),
   userId: text('user_id').notNull(),
 }, (table) => ({
-  pk: primaryKey([table.id, table.userId]),
+  pk: primaryKey({ columns: [table.id, table.userId] }),
 }));
 
 export const categoryBudgets = pgTable('category_budgets', {
   id: text('id').primaryKey(), // composite: categoryId_yearMonth
   categoryId: text('category_id').notNull(),
-  yearMonth: text('year_month', { length: 7 }).notNull(), // YYYY-MM format
+  yearMonth: text('year_month').notNull(), // YYYY-MM format
   monthlyLimit: real('monthly_limit').notNull().default(0),
   createdAt: timestamp('created_at').notNull(),
   updatedAt: timestamp('updated_at').notNull(),
@@ -48,7 +48,7 @@ export const settings = pgTable('settings', {
   createdAt: timestamp('created_at').notNull(),
   updatedAt: timestamp('updated_at').notNull(),
 }, (table) => ({
-  pk: primaryKey([table.id, table.userId]),
+  pk: primaryKey({ columns: [table.id, table.userId] }),
 }));
 
 export const users = pgTable('users', {

@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { SyncButton } from './components/SyncButton';
 import { CategoryBreakdown } from './components/charts/CategoryBreakdown';
 import { CategorySpendingTrend } from './components/charts/CategorySpendingTrend';
-import { format, subMonths, parseISO } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ChevronLeft, ChevronRight, ArrowDownRight, Wallet, Tag, TrendingUp } from 'lucide-react';
 
 interface DashboardData {
@@ -20,7 +20,7 @@ interface DashboardData {
   categorySpendingTrend: { month: string; [category: string]: number | string }[];
 }
 
-export default function DashboardPage() {
+function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [data, setData] = useState<DashboardData | null>(null);
@@ -30,7 +30,7 @@ export default function DashboardPage() {
   const [syncKey, setSyncKey] = useState(0);
 
   const selectedMonth = searchParams.get('month') || format(new Date(), 'yyyy-MM');
-  
+
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
@@ -67,24 +67,24 @@ export default function DashboardPage() {
     }
 
     fetchData();
-  }, [selectedMonth, syncKey]);
-  
+  }, [selectedMonth, syncKey, router]);
+
   function navigateMonth(direction: 'prev' | 'next') {
     const [year, month] = selectedMonth.split('-').map(Number);
     const date = new Date(year, month - 1 + (direction === 'next' ? 1 : -1), 1);
     const newYearMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    
+
     const params = new URLSearchParams(searchParams);
     params.set('month', newYearMonth);
     router.push(`/?${params.toString()}`);
   }
-  
+
   function formatMonthLabel(yearMonth: string): string {
     const [year, month] = yearMonth.split('-').map(Number);
     const date = new Date(year, month - 1, 1);
     return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   }
-  
+
   if (loading) {
     return (
       <main className="container mx-auto py-8 px-4">
@@ -97,7 +97,7 @@ export default function DashboardPage() {
       </main>
     );
   }
-  
+
   if (!data) {
     return (
       <main className="container mx-auto py-8 px-4">
@@ -110,7 +110,7 @@ export default function DashboardPage() {
       </main>
     );
   }
-  
+
   return (
     <main className="container mx-auto py-8 px-4">
       <div className="flex justify-between items-center mb-8">
@@ -125,8 +125,8 @@ export default function DashboardPage() {
 
       {/* Month Navigation - Budget Page Style */}
       <div className="flex items-center justify-center gap-4 mb-8">
-        <button 
-          className="p-2 rounded-md border hover:bg-gray-100" 
+        <button
+          className="p-2 rounded-md border hover:bg-gray-100"
           onClick={() => navigateMonth('prev')}
         >
           <ChevronLeft className="h-4 w-4" />
@@ -134,8 +134,8 @@ export default function DashboardPage() {
         <h2 className="text-xl font-semibold min-w-[200px] text-center">
           {formatMonthLabel(selectedMonth)}
         </h2>
-        <button 
-          className="p-2 rounded-md border hover:bg-gray-100" 
+        <button
+          className="p-2 rounded-md border hover:bg-gray-100"
           onClick={() => navigateMonth('next')}
         >
           <ChevronRight className="h-4 w-4" />
@@ -223,8 +223,8 @@ export default function DashboardPage() {
             <CardDescription>Spending by category over last 6 months</CardDescription>
           </CardHeader>
           <CardContent>
-            <CategorySpendingTrend 
-              data={data.categorySpendingTrend} 
+            <CategorySpendingTrend
+              data={data.categorySpendingTrend}
               categories={categories}
             />
           </CardContent>
@@ -243,5 +243,26 @@ export default function DashboardPage() {
         </Card>
       </div>
     </main>
+  );
+}
+
+function DashboardLoading() {
+  return (
+    <main className="container mx-auto py-8 px-4">
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold">Finance Tracker</h1>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<DashboardLoading />}>
+      <DashboardContent />
+    </Suspense>
   );
 }

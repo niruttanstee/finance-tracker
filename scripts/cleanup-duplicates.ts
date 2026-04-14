@@ -68,7 +68,7 @@ async function cleanupDuplicates() {
         const dupDateTimestamp = Math.floor((dup.date instanceof Date ? dup.date : new Date(dup.date)).getTime() / 1000);
         
         // Find and delete this specific duplicate
-        await db.run(sql`
+        await db.execute(sql`
           DELETE FROM transactions 
           WHERE rowid = (
             SELECT rowid FROM transactions 
@@ -84,7 +84,7 @@ async function cleanupDuplicates() {
       const keepDateTimestamp = Math.floor((keep.date instanceof Date ? keep.date : new Date(keep.date)).getTime() / 1000);
       
       try {
-        await db.run(sql`
+        await db.execute(sql`
           UPDATE transactions 
           SET id = ${newId}, updated_at = ${Math.floor(Date.now() / 1000)}
           WHERE (id = ${keep.id} OR (id IS NULL AND date = ${keepDateTimestamp} AND merchant = ${keep.merchant} AND amount = ${keep.amount} AND currency = ${keep.currency}))

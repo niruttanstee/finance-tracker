@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { sessions } from '@/lib/schema';
 import { eq, and, gt } from 'drizzle-orm';

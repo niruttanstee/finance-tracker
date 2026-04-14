@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -45,11 +45,7 @@ export default function TransactionsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
 
-  useEffect(() => {
-    fetchData();
-  }, [currentPage]);
-
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
     try {
       const offset = (currentPage - 1) * 50;
       const params = new URLSearchParams({
@@ -75,8 +71,12 @@ export default function TransactionsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [currentPage]);
 
+  useEffect(() => {
+    setLoading(true);
+    fetchData();
+  }, [fetchData]);
 
   async function handleCategoryChange(transactionId: string, category: string | undefined) {
     try {

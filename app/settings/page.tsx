@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { CategoryManager } from '../components/settings/CategoryManager';
 import { ApiSettings } from '../components/settings/ApiSettings';
-import { ArrowLeft, Settings, Key, Tags } from 'lucide-react';
+import { ArrowLeft, Key, Tags } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type SettingsSection = 'categories' | 'apis';

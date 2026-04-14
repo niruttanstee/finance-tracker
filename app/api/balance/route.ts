@@ -4,7 +4,14 @@ import { createWiseClient } from '@/lib/wise';
 export async function GET() {
   try {
     const client = createWiseClient();
-    
+    if (!client) {
+      return NextResponse.json({
+        balance: 0,
+        currency: 'MYR',
+        error: 'Wise API not configured'
+      }, { status: 400 });
+    }
+
     // Get personal profile
     const profiles = await client.getProfiles();
     let personalProfile = profiles.find(p => p.type?.toLowerCase() === 'personal');

@@ -34,7 +34,7 @@ function parseDate(dateStr: string, format: string): Date {
 function extractMerchant(description: string): string {
   // Skip known transaction type prefixes first
   const skipPrefix = /^(SALE\s*DEBIT|SALE\s*CREDIT|FUND\s*TRANSFER|TRANSFER\s*(FROM|TO)|IBK\s*FUND|BOOK\s*TRANSFER|FPX\s*PAYMENT|PYMT\s*(FROM|TO)|SVG\s*GIRO|DR\s*BUY|ESS\s*CLAIM)/i;
-  let desc = description.replace(skipPrefix, '').trim();
+  const desc = description.replace(skipPrefix, '').trim();
 
   // Maybank format: "TYPE | MERCHANT * | CITY | TYPE" — merchant is between | and *
   // The * marks the merchant name, so look for pattern: "| MERCHANT *"

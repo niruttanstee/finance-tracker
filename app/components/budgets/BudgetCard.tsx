@@ -22,7 +22,6 @@ export function BudgetCard({
   categoryName,
   categoryColor,
   monthlyLimit,
-  baseBudget,
   rolloverAmount,
   spent,
   remaining,
