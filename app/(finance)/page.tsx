@@ -4,9 +4,9 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
-import { SyncButton } from './components/SyncButton';
-import { CategoryBreakdown } from './components/charts/CategoryBreakdown';
-import { CategorySpendingTrend } from './components/charts/CategorySpendingTrend';
+import { SyncButton } from '@/app/components/SyncButton';
+import { CategoryBreakdown } from '@/app/components/charts/CategoryBreakdown';
+import { CategorySpendingTrend } from '@/app/components/charts/CategorySpendingTrend';
 import { format, parseISO } from 'date-fns';
 import { ChevronLeft, ChevronRight, ArrowDownRight, Wallet, Tag, TrendingUp } from 'lucide-react';
 

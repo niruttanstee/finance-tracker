@@ -4,7 +4,7 @@
 import { platformApps } from '@/lib/platform/apps';
 import { FinanceIconWrapper } from '@/components/platform/icons/FinanceIconWrapper';
 
-const iconComponents = {
+const iconComponents: Record<string, React.ReactNode> = {
   finance: <FinanceIconWrapper />,
 };
 

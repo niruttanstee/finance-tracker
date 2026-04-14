@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { CategoryManager } from '../components/settings/CategoryManager';
-import { ApiSettings } from '../components/settings/ApiSettings';
+import { CategoryManager } from '@/app/components/settings/CategoryManager';
+import { ApiSettings } from '@/app/components/settings/ApiSettings';
 import { ArrowLeft, Key, Tags } from 'lucide-react';
 import { cn } from '@/lib/utils';
 

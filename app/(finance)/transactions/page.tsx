@@ -13,7 +13,7 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 import { Skeleton } from '@/components/ui/skeleton';
-import { TransactionList } from '../components/transactions/TransactionList';
+import { TransactionList } from '@/app/components/transactions/TransactionList';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
