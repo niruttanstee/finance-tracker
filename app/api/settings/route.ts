@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { settings, sessions } from '@/lib/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { verifySessionCookie, COOKIE_NAME } from '@/lib/auth/session';
 
 async function getUserIdFromCookie(request: NextRequest): Promise<string | null> {
