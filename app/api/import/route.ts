@@ -3,7 +3,7 @@ import { parseBankStatement } from '@/lib/bank-parser';
 import { generateCompositeId, isTransactionIdentical } from '@/lib/transactions';
 import { db } from '@/lib/db';
 import { transactions, sessions } from '@/lib/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { verifySessionCookie, COOKIE_NAME } from '@/lib/auth/session';
 
 async function getUserIdFromCookie(request: NextRequest): Promise<string | null> {
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
       const compositeId = generateCompositeId(tx.date, tx.merchant, tx.amount, tx.currency);
 
       const existing = await db.query.transactions.findFirst({
-        where: eq(transactions.id, compositeId),
+        where: and(eq(transactions.id, compositeId), eq(transactions.userId, userId)),
       });
 
       if (existing) {
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
               category: existing.category, // Preserve existing category
               updatedAt: new Date(),
             })
-            .where(eq(transactions.id, compositeId));
+            .where(and(eq(transactions.id, compositeId), eq(transactions.userId, userId)));
           updated++;
         }
       } else {
