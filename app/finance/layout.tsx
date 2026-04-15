@@ -33,28 +33,31 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
     <div className="min-h-screen">
       {/* App Header with Navigation */}
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex items-center h-14 px-4">
-          <button
-            onClick={() => router.push('/')}
-            className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+        <div className="flex items-center justify-between h-14 px-4">
+          {/* Left: Back button + Title */}
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => router.push('/')}
+              className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
-            Back
-          </button>
-          <div className="flex-1 flex justify-center">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+              Back
+            </button>
             <span className="text-sm font-semibold">Finance</span>
           </div>
+
+          {/* Center: Navigation */}
           <nav className="flex items-center gap-4">
             <Link
               href="/finance"
@@ -80,6 +83,10 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
             >
               Transactions
             </Link>
+          </nav>
+
+          {/* Right: Actions */}
+          <div className="flex items-center gap-2">
             <Link href="/finance/settings" aria-label="Settings">
               <Button variant="outline" size="icon">
                 <Settings className="h-4 w-4" />
@@ -89,8 +96,7 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
             <Button variant="outline" size="icon" onClick={handleLogout} aria-label="Logout">
               <LogOut className="h-4 w-4" />
             </Button>
-          </nav>
-          <div className="w-[60px]" />
+          </div>
         </div>
       </header>
       {/* Page Content */}
