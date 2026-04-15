@@ -1,11 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { format } from 'date-fns';
-import { CalendarIcon, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Popover, PopoverPopup, PopoverPortal, PopoverPositioner, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import {
   Select,
   SelectContent,
@@ -21,9 +17,7 @@ interface Category {
 }
 
 interface FilterState {
-  startDate: Date | undefined;
-  endDate: Date | undefined;
-  category: string | undefined;
+  category: string | null | undefined;
 }
 
 interface FilterBarProps {
@@ -33,76 +27,27 @@ interface FilterBarProps {
 }
 
 export function FilterBar({ categories, filters, onFilterChange }: FilterBarProps) {
-  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
-    from: filters.startDate,
-    to: filters.endDate,
-  });
-  const [calendarOpen, setCalendarOpen] = useState(false);
-
-  const handleDateRangeSelect = (range: { from?: Date; to?: Date } | undefined) => {
-    setDateRange({ from: range?.from, to: range?.to });
-    onFilterChange({
-      ...filters,
-      startDate: range?.from,
-      endDate: range?.to,
-    });
-  };
-
   const handleCategoryChange = (value: string | null) => {
     onFilterChange({
-      ...filters,
-      category: !value || value === 'all' ? undefined : value,
+      category: !value || value === 'all' ? undefined : value === 'uncategorized' ? null : value,
     });
   };
 
   const clearFilters = () => {
-    setDateRange({ from: undefined, to: undefined });
-    onFilterChange({ startDate: undefined, endDate: undefined, category: undefined });
+    onFilterChange({ category: undefined });
   };
 
-  const hasActiveFilters = filters.startDate || filters.endDate || filters.category;
-
-  const dateRangeDisplay = dateRange.from
-    ? dateRange.to
-      ? `${format(dateRange.from, 'MMM d')} – ${format(dateRange.to, 'MMM d, yyyy')}`
-      : `${format(dateRange.from, 'MMM d, yyyy')} – Select end date`
-    : 'Select date range';
+  const hasActiveFilters = filters.category !== undefined;
 
   return (
     <div className="flex flex-wrap gap-2 items-center">
-      <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-        <PopoverTrigger
-          render={
-            <Button
-              variant="outline"
-              className={`w-[240px] justify-start text-left font-normal ${!dateRange.from && 'text-muted-foreground'}`}
-            />
-          }
-        >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {dateRangeDisplay}
-        </PopoverTrigger>
-        <PopoverPortal>
-          <PopoverPositioner>
-            <PopoverPopup className="w-auto p-0">
-              <Calendar
-                mode="range"
-                selected={dateRange as { from: Date; to: Date } | undefined}
-                onSelect={handleDateRangeSelect}
-                numberOfMonths={2}
-                disabled={(date) => date > new Date()}
-              />
-            </PopoverPopup>
-          </PopoverPositioner>
-        </PopoverPortal>
-      </Popover>
-
-      <Select value={filters.category || 'all'} onValueChange={handleCategoryChange}>
+      <Select value={filters.category === null ? 'uncategorized' : filters.category || 'all'} onValueChange={handleCategoryChange}>
         <SelectTrigger className="w-[180px]">
           <SelectValue placeholder="All Categories" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Categories</SelectItem>
+          <SelectItem value="uncategorized">Uncategorized</SelectItem>
           {categories.map((category) => (
             <SelectItem key={category.id} value={category.name}>
               <div className="flex items-center gap-2">

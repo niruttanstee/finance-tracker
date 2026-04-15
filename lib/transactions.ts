@@ -7,7 +7,7 @@ import { getCategoryByName } from './categories';
 export interface TransactionFilters {
   startDate?: Date;
   endDate?: Date;
-  category?: string;
+  category?: string | null;
   type?: 'DEBIT' | 'CREDIT';
 }
 
@@ -35,7 +35,9 @@ export async function getTransactions(
   if (filters?.endDate) {
     conditions.push(lte(transactions.date, filters.endDate));
   }
-  if (filters?.category) {
+  if (filters?.category === null) {
+    conditions.push(isNull(transactions.category));
+  } else if (filters?.category) {
     conditions.push(eq(transactions.category, filters.category));
   }
   if (filters?.type) {

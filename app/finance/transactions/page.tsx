@@ -46,10 +46,8 @@ export default function TransactionsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const [filters, setFilters] = useState({
-    startDate: undefined as Date | undefined,
-    endDate: undefined as Date | undefined,
-    category: undefined as string | undefined,
+  const [filters, setFilters] = useState<{ category: string | null | undefined }>({
+    category: undefined,
   });
   const [sorting, setSorting] = useState<SortingState>([]);
 
@@ -62,9 +60,7 @@ export default function TransactionsPage() {
         offset: String(offset),
       });
 
-      if (filters.startDate) params.set('startDate', filters.startDate.toISOString());
-      if (filters.endDate) params.set('endDate', filters.endDate.toISOString());
-      if (filters.category) params.set('category', filters.category);
+      if (filters.category !== undefined) params.set('category', filters.category ?? 'null');
 
       const [transactionsRes, categoriesRes] = await Promise.all([
         fetch(`/api/transactions?${params}`),

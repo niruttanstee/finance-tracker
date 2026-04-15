@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       endDate: searchParams.get('endDate')
         ? new Date(searchParams.get('endDate')!)
         : undefined,
-      category: searchParams.get('category') || undefined,
+      category: searchParams.get('category') === 'null' ? null : searchParams.get('category') || undefined,
       type: (searchParams.get('type') as 'DEBIT' | 'CREDIT') || undefined,
     };
 
