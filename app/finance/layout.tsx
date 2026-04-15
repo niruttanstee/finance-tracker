@@ -1,6 +1,11 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { ThemeToggle } from '@/app/components/ThemeToggle';
+import { Button } from '@/components/ui/button';
+import { Settings, LogOut } from 'lucide-react';
 
 interface FinanceLayoutProps {
   children: React.ReactNode;
@@ -8,10 +13,25 @@ interface FinanceLayoutProps {
 
 export default function FinanceLayout({ children }: FinanceLayoutProps) {
   const router = useRouter();
+  const pathname = usePathname();
+
+  function isActive(href: string) {
+    if (href === '/finance') return pathname === '/finance' || pathname === '/finance/';
+    return pathname.startsWith(href);
+  }
+
+  async function handleLogout() {
+    try {
+      await fetch('/api/auth/logout', { method: 'DELETE' });
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  }
 
   return (
     <div className="min-h-screen">
-      {/* App Header with Back Button */}
+      {/* App Header with Navigation */}
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center h-14 px-4">
           <button
@@ -35,6 +55,41 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
           <div className="flex-1 flex justify-center">
             <span className="text-sm font-semibold">Finance</span>
           </div>
+          <nav className="flex items-center gap-4">
+            <Link
+              href="/finance"
+              className={`text-sm px-3 py-1.5 rounded-md transition-colors ${
+                isActive('/finance') ? 'bg-muted text-foreground' : 'hover:text-primary'
+              }`}
+            >
+              Dashboard
+            </Link>
+            <Link
+              href="/finance/budgets"
+              className={`text-sm px-3 py-1.5 rounded-md transition-colors ${
+                isActive('/finance/budgets') ? 'bg-muted text-foreground' : 'hover:text-primary'
+              }`}
+            >
+              Budgets
+            </Link>
+            <Link
+              href="/finance/transactions"
+              className={`text-sm px-3 py-1.5 rounded-md transition-colors ${
+                isActive('/finance/transactions') ? 'bg-muted text-foreground' : 'hover:text-primary'
+              }`}
+            >
+              Transactions
+            </Link>
+            <Link href="/finance/settings" aria-label="Settings">
+              <Button variant="outline" size="icon">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </Link>
+            <ThemeToggle variant="outline" />
+            <Button variant="outline" size="icon" onClick={handleLogout} aria-label="Logout">
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </nav>
           <div className="w-[60px]" />
         </div>
       </header>
