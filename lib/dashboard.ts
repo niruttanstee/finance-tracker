@@ -32,6 +32,7 @@ export async function getDashboardData(monthStr: string, userId: string): Promis
       and(
         eq(transactions.userId, userId),
         gte(transactions.date, trendStart),
+        eq(transactions.ignored, false),
         eq(transactions.type, 'DEBIT')
       )
     )
@@ -84,6 +85,7 @@ export async function getDashboardData(monthStr: string, userId: string): Promis
         eq(transactions.userId, userId),
         gte(transactions.date, monthStart),
         lte(transactions.date, monthEnd),
+        eq(transactions.ignored, false),
         eq(transactions.type, 'CREDIT')
       )
     );
@@ -103,6 +105,7 @@ export async function getDashboardData(monthStr: string, userId: string): Promis
         eq(transactions.userId, userId),
         gte(transactions.date, monthStart),
         lte(transactions.date, monthEnd),
+        eq(transactions.ignored, false),
         eq(transactions.type, 'DEBIT')
       )
     )

@@ -135,6 +135,7 @@ export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
+    const force = searchParams.get('force') === 'true';
 
     if (!id) {
       return NextResponse.json(
@@ -143,7 +144,13 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    await deleteCategory(id, userId);
+    if (force) {
+      // Force delete - bypass usage check
+      const { deleteCategoryForce } = await import('@/lib/categories');
+      await deleteCategoryForce(id, userId);
+    } else {
+      await deleteCategory(id, userId);
+    }
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting category:', error);

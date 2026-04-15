@@ -41,6 +41,7 @@ export async function getTransactions(
   if (filters?.type) {
     conditions.push(eq(transactions.type, filters.type));
   }
+  conditions.push(eq(transactions.ignored, false));
 
   const whereClause = and(...conditions);
 
@@ -115,7 +116,8 @@ export async function getMonthlySpending(
     .from(transactions)
     .where(and(
       eq(transactions.userId, userId),
-      gte(transactions.date, startDate)
+      gte(transactions.date, startDate),
+      eq(transactions.ignored, false)
     ))
     .groupBy(sql`to_char(${transactions.date}, 'YYYY-MM')`)
     .orderBy(sql`to_char(${transactions.date}, 'YYYY-MM')`);
@@ -139,6 +141,7 @@ export async function getCategoryBreakdown(
         eq(transactions.userId, userId),
         gte(transactions.date, startDate),
         lte(transactions.date, endDate),
+        eq(transactions.ignored, false),
         eq(transactions.type, 'DEBIT')
       )
     )
@@ -163,7 +166,8 @@ export async function getUncategorizedCount(userId: string): Promise<number> {
     .from(transactions)
     .where(and(
       eq(transactions.userId, userId),
-      isNull(transactions.category)
+      isNull(transactions.category),
+      eq(transactions.ignored, false)
     ));
 
   return result[0]?.count || 0;

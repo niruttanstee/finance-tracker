@@ -29,6 +29,7 @@ interface Transaction {
   exchangeRate: number | null;
   type: 'DEBIT' | 'CREDIT';
   category: string | undefined;
+  ignored: boolean;
 }
 
 interface Category {
@@ -99,6 +100,26 @@ export default function TransactionsPage() {
     }
   }
 
+  async function handleIgnoreTransaction(transactionId: string, ignored: boolean) {
+    try {
+      const response = await fetch('/api/transactions', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: transactionId, ignored }),
+      });
+
+      if (response.ok) {
+        setTransactions(prev =>
+          prev.map(t =>
+            t.id === transactionId ? { ...t, ignored } : t
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error updating transaction:', error);
+    }
+  }
+
   if (loading) {
     return (
       <main className="container mx-auto py-8 px-4">
@@ -148,6 +169,7 @@ export default function TransactionsPage() {
             transactions={transactions}
             categories={categories}
             onCategoryChange={handleCategoryChange}
+            onIgnoreTransaction={handleIgnoreTransaction}
           />
 
           <Pagination className="mt-4">

@@ -66,7 +66,8 @@ export async function getSpendingForCategory(
         eq(transactions.userId, userId),
         gte(transactions.date, startDate),
         lte(transactions.date, endDate),
-        eq(transactions.category, categoryName)
+        eq(transactions.category, categoryName),
+        eq(transactions.ignored, false)
       )
     );
 

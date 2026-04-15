@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTransactions, updateTransactionCategory } from '@/lib/transactions';
+import { getTransactions, updateTransactionCategory, getTransactionById } from '@/lib/transactions';
 import { db } from '@/lib/db';
-import { sessions } from '@/lib/schema';
-import { eq } from 'drizzle-orm';
+import { sessions, transactions } from '@/lib/schema';
+import { eq, and } from 'drizzle-orm';
 import { verifySessionCookie, COOKIE_NAME } from '@/lib/auth/session';
 
 async function getUserIdFromCookie(request: NextRequest): Promise<string | null> {
@@ -70,7 +70,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   try {
-    const { id, category } = await request.json();
+    const { id, category, ignored } = await request.json();
 
     if (!id) {
       return NextResponse.json(
@@ -79,7 +79,27 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    await updateTransactionCategory(id, category, userId);
+    // Get transaction to verify ownership
+    const tx = await getTransactionById(id);
+    if (!tx || tx.userId !== userId) {
+      return NextResponse.json(
+        { error: 'Transaction not found' },
+        { status: 404 }
+      );
+    }
+
+    // Handle category update
+    if (category !== undefined) {
+      await updateTransactionCategory(id, category, userId);
+    }
+
+    // Handle ignored update
+    if (ignored !== undefined) {
+      await db
+        .update(transactions)
+        .set({ ignored, updatedAt: new Date() })
+        .where(and(eq(transactions.id, id), eq(transactions.userId, userId)));
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

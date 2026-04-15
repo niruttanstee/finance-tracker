@@ -14,6 +14,7 @@ export const transactions = pgTable('transactions', {
   exchangeRate: real('exchange_rate'), // Rate used for conversion
   type: text('type', { enum: ['DEBIT', 'CREDIT'] }).notNull(),
   category: text('category'),
+  ignored: boolean('ignored').notNull().default(false),
   createdAt: timestamp('created_at').notNull(),
   updatedAt: timestamp('updated_at').notNull(),
 });

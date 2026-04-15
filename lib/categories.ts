@@ -1,6 +1,6 @@
 import { db } from './db';
-import { categories, type Category } from './schema';
-import { eq, and } from 'drizzle-orm';
+import { categories, transactions, type Category } from './schema';
+import { eq, and, sql } from 'drizzle-orm';
 import { getOrCreateBudget } from './budgets';
 
 export async function getAllCategories(userId: string): Promise<Category[]> {
@@ -93,12 +93,38 @@ export async function getCategoryByName(name: string, userId: string): Promise<C
 }
 
 export async function deleteCategory(id: string, userId: string): Promise<void> {
-  // Don't delete default categories
   const category = await getCategoryById(id, userId);
-  if (category?.isDefault) {
-    throw new Error('Cannot delete default categories');
+  if (!category) {
+    throw new Error('Category not found');
   }
 
+  // Count transactions using this category name
+  const [result] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.userId, userId),
+        eq(transactions.category, category.name)
+      )
+    );
+  const count = result?.count || 0;
+
+  if (count > 0) {
+    const error = new Error('Category is in use') as Error & { code: string; count: number };
+    error.code = 'IN_USE';
+    error.count = count;
+    throw error;
+  }
+
+  await db.delete(categories).where(and(eq(categories.id, id), eq(categories.userId, userId)));
+}
+
+export async function deleteCategoryForce(id: string, userId: string): Promise<void> {
+  const category = await getCategoryById(id, userId);
+  if (!category) {
+    throw new Error('Category not found');
+  }
   await db.delete(categories).where(and(eq(categories.id, id), eq(categories.userId, userId)));
 }
 

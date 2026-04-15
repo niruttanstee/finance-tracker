@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Wallet } from 'lucide-react';
+import { EyeOff, Plus, Pencil, Trash2, Wallet } from 'lucide-react';
 
 interface Category {
   id: string;
@@ -36,6 +37,11 @@ export function CategoryManager() {
   const [isBudgetDialogOpen, setIsBudgetDialogOpen] = useState(false);
   const [budgetCategory, setBudgetCategory] = useState<Category | null>(null);
   const [budgetValue, setBudgetValue] = useState<number>(0);
+
+  // Delete dialog state
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
+  const [deleteUsageCount, setDeleteUsageCount] = useState(0);
 
   useEffect(() => {
     fetchCategories();
@@ -125,16 +131,45 @@ export function CategoryManager() {
       const response = await fetch(`/api/categories?id=${categoryId}`, {
         method: 'DELETE',
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
+        if (error.error === 'Category is in use') {
+          const cat = categories.find(c => c.id === categoryId);
+          setDeleteTarget(cat || null);
+          setDeleteUsageCount(error.count || 0);
+          setIsDeleteDialogOpen(true);
+          return;
+        }
         throw new Error(error.error || 'Failed to delete category');
       }
-      
+
       fetchCategories();
     } catch (error) {
       console.error('Error deleting category:', error);
       alert(error instanceof Error ? error.message : 'An error occurred');
+    }
+  }
+
+  async function handleForceDelete() {
+    if (!deleteTarget) return;
+    try {
+      const response = await fetch(`/api/categories?id=${deleteTarget.id}&force=true`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete category');
+      }
+
+      setIsDeleteDialogOpen(false);
+      setDeleteTarget(null);
+      fetchCategories();
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      alert(error instanceof Error ? error.message : 'An error occurred');
+      setIsDeleteDialogOpen(false);
     }
   }
 
@@ -248,26 +283,22 @@ export function CategoryManager() {
                     >
                       <Wallet className="h-4 w-4" />
                     </Button>
-                    {!category.isDefault && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => openEditDialog(category)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => handleDelete(category.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </>
-                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => openEditDialog(category)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => handleDelete(category.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>
@@ -394,6 +425,21 @@ export function CategoryManager() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Category?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget?.name} is assigned to {deleteUsageCount} transaction{deleteUsageCount !== 1 ? 's' : ''}. They will become uncategorized.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleForceDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
