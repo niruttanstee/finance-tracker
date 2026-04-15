@@ -40,7 +40,6 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
               variant="outline"
               size="icon"
               onClick={() => router.push('/')}
-              className="text-orange-500 border-orange-500 hover:bg-orange-50"
               aria-label="Back to launcher"
             >
               <svg
