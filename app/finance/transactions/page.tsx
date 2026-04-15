@@ -13,9 +13,11 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 import { Skeleton } from '@/components/ui/skeleton';
-import { TransactionList } from '@/app/components/transactions/TransactionList';
+import { TransactionTable } from '@/app/components/transactions/TransactionTable';
+import { FilterBar } from '@/app/components/transactions/FilterBar';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { SortingState } from '@tanstack/react-table';
 
 interface Transaction {
   id: string;
@@ -29,7 +31,6 @@ interface Transaction {
   exchangeRate: number | null;
   type: 'DEBIT' | 'CREDIT';
   category: string | undefined;
-  ignored: boolean;
 }
 
 interface Category {
@@ -45,6 +46,12 @@ export default function TransactionsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [filters, setFilters] = useState({
+    startDate: undefined as Date | undefined,
+    endDate: undefined as Date | undefined,
+    category: undefined as string | undefined,
+  });
+  const [sorting, setSorting] = useState<SortingState>([]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -54,6 +61,10 @@ export default function TransactionsPage() {
         limit: '50',
         offset: String(offset),
       });
+
+      if (filters.startDate) params.set('startDate', filters.startDate.toISOString());
+      if (filters.endDate) params.set('endDate', filters.endDate.toISOString());
+      if (filters.category) params.set('category', filters.category);
 
       const [transactionsRes, categoriesRes] = await Promise.all([
         fetch(`/api/transactions?${params}`),
@@ -72,12 +83,17 @@ export default function TransactionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage]);
+  }, [currentPage, filters]);
 
   useEffect(() => {
     setLoading(true);
     fetchData();
   }, [fetchData]);
+
+  const handleFilterChange = (newFilters: typeof filters) => {
+    setFilters(newFilters);
+    setCurrentPage(1);
+  };
 
   async function handleCategoryChange(transactionId: string, category: string | undefined) {
     try {
@@ -88,7 +104,6 @@ export default function TransactionsPage() {
       });
 
       if (response.ok) {
-        // Update local state
         setTransactions(prev =>
           prev.map(t =>
             t.id === transactionId ? { ...t, category } : t
@@ -97,26 +112,6 @@ export default function TransactionsPage() {
       }
     } catch (error) {
       console.error('Error updating category:', error);
-    }
-  }
-
-  async function handleIgnoreTransaction(transactionId: string, ignored: boolean) {
-    try {
-      const response = await fetch('/api/transactions', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: transactionId, ignored }),
-      });
-
-      if (response.ok) {
-        setTransactions(prev =>
-          prev.map(t =>
-            t.id === transactionId ? { ...t, ignored } : t
-          )
-        );
-      }
-    } catch (error) {
-      console.error('Error updating transaction:', error);
     }
   }
 
@@ -156,7 +151,14 @@ export default function TransactionsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>All Transactions</CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <CardTitle>All Transactions</CardTitle>
+            <FilterBar
+              categories={categories}
+              filters={filters}
+              onFilterChange={handleFilterChange}
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <div className="mb-4">
@@ -165,11 +167,12 @@ export default function TransactionsPage() {
             </span>
           </div>
 
-          <TransactionList
+          <TransactionTable
             transactions={transactions}
             categories={categories}
             onCategoryChange={handleCategoryChange}
-            onIgnoreTransaction={handleIgnoreTransaction}
+            sorting={sorting}
+            onSortingChange={setSorting}
           />
 
           <Pagination className="mt-4">
