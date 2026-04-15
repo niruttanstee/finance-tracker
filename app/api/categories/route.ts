@@ -95,14 +95,6 @@ export async function PUT(request: NextRequest) {
 
     let category;
 
-    // Update name/color/noRollover if provided
-    if (name && color) {
-      category = await updateCategory(id, name, color, noRollover, userId);
-    } else if (typeof noRollover !== 'undefined') {
-      // Just update noRollover if that's all that's being changed
-      category = await updateCategory(id, '', '', noRollover, userId);
-    }
-
     // Update default budget if provided and trigger cascade
     if (typeof defaultBudget === 'number' && defaultBudget >= 0) {
       category = await updateCategoryDefaultBudget(id, defaultBudget, userId);
@@ -114,6 +106,14 @@ export async function PUT(request: NextRequest) {
         data: category,
         cascadeUpdated: monthsUpdated
       });
+    }
+
+    // Update name/color/noRollover if provided
+    if (name && color) {
+      category = await updateCategory(id, name, color, noRollover, userId);
+    } else if (typeof noRollover !== 'undefined') {
+      // Just update noRollover if that's all that's being changed
+      category = await updateCategory(id, '', '', noRollover, userId);
     }
 
     return NextResponse.json({ data: category });
