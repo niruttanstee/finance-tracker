@@ -38,7 +38,7 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.push('/')}
-              className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-2 text-sm font-medium text-orange-500 border border-orange-500 hover:bg-orange-50 px-3 py-1.5 rounded-md transition-colors"
             >
               <svg
                 width="16"
