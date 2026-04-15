@@ -67,7 +67,7 @@ export default function BudgetsPage() {
   return (
     <main className="container mx-auto py-8 px-4">
       <div className="mb-8">
-        <Link href="/">
+        <Link href="/finance">
           <Button variant="ghost" className="mb-4">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Dashboard
@@ -80,7 +80,7 @@ export default function BudgetsPage() {
               Track your monthly spending by category
             </p>
           </div>
-          <Link href="/settings">
+          <Link href="/finance/settings">
             <Button variant="outline">
               <Wallet className="mr-2 h-4 w-4" />
               Manage Budgets
@@ -163,7 +163,7 @@ export default function BudgetsPage() {
             <p className="text-muted-foreground mb-4">
               Set up monthly budgets for your categories to track spending
             </p>
-            <Link href="/settings">
+            <Link href="/finance/settings">
               <Button>Go to Settings</Button>
             </Link>
           </CardContent>

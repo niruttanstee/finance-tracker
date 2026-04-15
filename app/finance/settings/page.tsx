@@ -21,7 +21,7 @@ export default function SettingsPage() {
   return (
     <main className="container mx-auto py-8 px-4">
       <div className="mb-8">
-        <Link href="/">
+        <Link href="/finance">
           <Button variant="ghost" className="mb-4">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Dashboard

@@ -195,7 +195,7 @@ function DashboardContent() {
           </CardContent>
         </Card>
 
-        <Link href="/transactions">
+        <Link href="/finance/transactions">
           <Card className="cursor-pointer hover:bg-gray-50 transition-colors">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
