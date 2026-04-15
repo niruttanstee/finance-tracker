@@ -25,9 +25,7 @@ export async function middleware(request: NextRequest) {
     if (pathname.startsWith('/api')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(new URL('/', request.url));
   }
 
   // Verify HMAC signature
@@ -38,9 +36,7 @@ export async function middleware(request: NextRequest) {
       response.cookies.delete(COOKIE_NAME);
       return response;
     }
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('redirect', pathname);
-    const response = NextResponse.redirect(loginUrl);
+    const response = NextResponse.redirect(new URL('/', request.url));
     response.cookies.delete(COOKIE_NAME);
     return response;
   }
