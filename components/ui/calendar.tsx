@@ -9,12 +9,10 @@ export type CalendarProps = React.ComponentProps<typeof DayPicker>
 function Calendar({
   className,
   classNames,
-  showLocal,
   ...props
 }: CalendarProps) {
   return (
     <DayPicker
-      showLocal={showLocal}
       className={cn("p-3", className)}
       classNames={{
         months: "flex flex-col sm:flex-row gap-4",
@@ -45,17 +43,6 @@ function Calendar({
           "aria-selected:bg-accent aria-selected:text-accent-foreground",
         day_hidden: "invisible",
         ...classNames,
-      }}
-      components={{
-        Caption: ({ ...props }) => {
-          return (
-            <div
-              role="presentation"
-              {...props}
-              className="flex justify-center pt-1 relative items-center"
-            />
-          )
-        },
       }}
       {...props}
     />

@@ -13,8 +13,8 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 import { Skeleton } from '@/components/ui/skeleton';
-import { TransactionTable } from '@/app/components/transactions/TransactionTable';
-import { FilterBar } from '@/app/components/transactions/FilterBar';
+import { TransactionTable } from '@/components/transactions/TransactionTable';
+import { FilterBar } from '@/components/transactions/FilterBar';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { SortingState } from '@tanstack/react-table';

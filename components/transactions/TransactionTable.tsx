@@ -7,6 +7,7 @@ import {
   flexRender,
   getCoreRowModel,
   useReactTable,
+  OnChangeFn,
 } from '@tanstack/react-table';
 import { format } from 'date-fns';
 import {
@@ -50,7 +51,7 @@ interface TransactionTableProps {
   categories: Category[];
   onCategoryChange: (transactionId: string, category: string | undefined) => void;
   sorting: SortingState;
-  onSortingChange: (sorting: SortingState) => void;
+  onSortingChange: OnChangeFn<SortingState>;
 }
 
 export function TransactionTable({
@@ -64,12 +65,12 @@ export function TransactionTable({
 
   const handleCategoryChange = async (
     transactionId: string,
-    value: string
+    value: string | null
   ) => {
     setUpdating(transactionId);
     await onCategoryChange(
       transactionId,
-      value === 'uncategorized' ? undefined : value
+      !value || value === 'uncategorized' ? undefined : value
     );
     setUpdating(null);
   };

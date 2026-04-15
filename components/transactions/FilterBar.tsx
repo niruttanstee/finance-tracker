@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { CalendarIcon, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Popover, PopoverPopup, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import {
   Select,
@@ -39,19 +39,19 @@ export function FilterBar({ categories, filters, onFilterChange }: FilterBarProp
   });
   const [calendarOpen, setCalendarOpen] = useState(false);
 
-  const handleDateRangeSelect = (range: { from: Date | undefined; to: Date | undefined }) => {
-    setDateRange(range);
+  const handleDateRangeSelect = (range: { from?: Date; to?: Date } | undefined) => {
+    setDateRange({ from: range?.from, to: range?.to });
     onFilterChange({
       ...filters,
-      startDate: range.from,
-      endDate: range.to,
+      startDate: range?.from,
+      endDate: range?.to,
     });
   };
 
-  const handleCategoryChange = (value: string) => {
+  const handleCategoryChange = (value: string | null) => {
     onFilterChange({
       ...filters,
-      category: value === 'all' ? undefined : value,
+      category: !value || value === 'all' ? undefined : value,
     });
   };
 
@@ -71,24 +71,26 @@ export function FilterBar({ categories, filters, onFilterChange }: FilterBarProp
   return (
     <div className="flex flex-wrap gap-2 items-center">
       <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className={`w-[240px] justify-start text-left font-normal ${!dateRange.from && 'text-muted-foreground'}`}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {dateRangeDisplay}
-          </Button>
+        <PopoverTrigger
+          render={
+            <Button
+              variant="outline"
+              className={`w-[240px] justify-start text-left font-normal ${!dateRange.from && 'text-muted-foreground'}`}
+            />
+          }
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {dateRangeDisplay}
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverPopup className="w-auto p-0" style={{ width: 'var(--popover-anchor-width)' }}>
           <Calendar
             mode="range"
-            selected={{ from: dateRange.from, to: dateRange.to }}
+            selected={dateRange as { from: Date; to: Date } | undefined}
             onSelect={handleDateRangeSelect}
             numberOfMonths={2}
             disabled={(date) => date > new Date()}
           />
-        </PopoverContent>
+        </PopoverPopup>
       </Popover>
 
       <Select value={filters.category || 'all'} onValueChange={handleCategoryChange}>
