@@ -1,0 +1,31 @@
+<h2>Platform Architecture</h2>
+<p class="subtitle">How should the app launcher and child apps relate?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Monorepo with Sub-Apps</h3>
+      <p>One Next.js app with <code>/&lt;app&gt;</code> routes. Finance lives at <code>/finance</code>, future apps at <code>/&lt;name&gt;</code>. Shared auth, DB, and UI shell.</p>
+      <p style="margin-top:8px;font-size:13px;color:#888">Example: <code>app/launcher/page.tsx</code> + <code>app/finance/page.tsx</code></p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Multi-App Workspace</h3>
+      <p>Parent monorepo (<code>platform/</code>) manages multiple independent deployables. Each app (finance, etc.) is its own package with shared types.</p>
+      <p style="margin-top:8px;font-size:13px;color:#888">Example: Turborepo with <code>apps/launcher</code>, <code>apps/finance</code>, <code>apps/notes</code></p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Standalone with Subdomain</h3>
+      <p>Each app is a fully independent deployment. Launcher lives at <code>app.example.com</code>, finance at <code>finance.example.com</code>. SSO shared across apps.</p>
+      <p style="margin-top:8px;font-size:13px;color:#888">Example: Separate Vercel/Cloudflare deploys with shared auth provider</p>
+    </div>
+  </div>
+</div>

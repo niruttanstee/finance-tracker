@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifySessionCookie, COOKIE_NAME } from './lib/auth/session';
 
-const PUBLIC_PATHS = ['/api/auth/login', '/login'];
+const PUBLIC_PATHS = ['/api/auth/login'];
 const PROTECTED_PREFIXES = ['/api/', '/finance'];
 
 export async function middleware(request: NextRequest) {

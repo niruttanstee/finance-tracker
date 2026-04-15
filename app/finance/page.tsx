@@ -42,7 +42,7 @@ function DashboardContent() {
 
         // Redirect to login if not authenticated
         if (dashboardResponse.status === 401) {
-          router.push('/login');
+          router.push('/');
           return;
         }
 

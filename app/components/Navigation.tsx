@@ -17,7 +17,7 @@ export function Navigation() {
   async function handleLogout() {
     try {
       await fetch('/api/auth/logout', { method: 'DELETE' });
-      window.location.href = '/login';
+      window.location.href = '/';
     } catch (error) {
       console.error('Logout failed:', error);
     }
