@@ -76,7 +76,7 @@ function DashboardContent() {
 
     const params = new URLSearchParams(searchParams);
     params.set('month', newYearMonth);
-    router.push(`/?${params.toString()}`);
+    router.push(`/finance?${params.toString()}`);
   }
 
   function formatMonthLabel(yearMonth: string): string {
