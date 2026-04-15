@@ -1,13 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBudgetForCategory, updateBudgetLimit } from '@/lib/budgets';
-import { getUserIdFromRequest } from '@/lib/auth/api';
+import { db } from '@/lib/db';
+import { sessions } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
+import { verifySessionCookie, COOKIE_NAME } from '@/lib/auth/session';
+
+async function getUserIdFromCookie(request: NextRequest): Promise<string | null> {
+  const cookieValue = request.cookies.get(COOKIE_NAME)?.value;
+  if (!cookieValue) return null;
+
+  const sessionId = await verifySessionCookie(cookieValue);
+  if (!sessionId) return null;
+
+  const now = new Date();
+  const [session] = await db
+    .select()
+    .from(sessions)
+    .where(eq(sessions.id, sessionId))
+    .limit(1);
+
+  if (!session || session.expiresAt <= now) return null;
+  return session.userId;
+}
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { categoryId: string } }
 ) {
   try {
-    const userId = await getUserIdFromRequest(request);
+    const userId = await getUserIdFromCookie(request);
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -46,7 +67,7 @@ export async function PATCH(
   { params }: { params: { categoryId: string } }
 ) {
   try {
-    const userId = await getUserIdFromRequest(request);
+    const userId = await getUserIdFromCookie(request);
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

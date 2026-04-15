@@ -2,14 +2,29 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createWiseClient } from '@/lib/wise';
 import { db } from '@/lib/db';
 import { eq, and } from 'drizzle-orm';
-import { transactions, settings } from '@/lib/schema';
-import { getUserIdFromRequest } from '@/lib/auth/api';
-
+import { transactions, settings, sessions } from '@/lib/schema';
+import { verifySessionCookie, COOKIE_NAME } from '@/lib/auth/session';
 import { generateCompositeId, isTransactionIdentical } from '@/lib/transactions';
 
+async function getUserIdFromCookie(request: NextRequest): Promise<string | null> {
+  const cookieValue = request.cookies.get(COOKIE_NAME)?.value;
+  if (!cookieValue) return null;
+
+  const sessionId = await verifySessionCookie(cookieValue);
+  if (!sessionId) return null;
+
+  const now = new Date();
+  const [session] = await db
+    .select()
+    .from(sessions)
+    .where(eq(sessions.id, sessionId))
+    .limit(1);
+
+  if (!session || session.expiresAt <= now) return null;
+  return session.userId;
+}
+
 function extractMerchant(description: string | null | undefined, typeLabel: string): string {
-  // Try to extract merchant name from Wise description
-  // Format is usually: "CARD_TRANSACTION from MERCHANT_NAME"
   if (!description) return typeLabel;
   const match = description.match(/from\s+(.+?)(?:\s+on\s+|\s*$)/i);
   return match ? match[1].trim() : typeLabel;
@@ -57,7 +72,6 @@ async function parseStatementTransaction(
   updatedAt: Date;
 }> {
   const isDebit = transaction.amount < 0;
-  // Use transaction type as fallback, format it nicely (e.g., "CARD_TRANSACTION" -> "Card Transaction")
   const typeLabel = transaction.type
     ?.replace(/_/g, ' ')
     .toLowerCase()
@@ -67,11 +81,10 @@ async function parseStatementTransaction(
   const date = new Date(transaction.date);
   const absAmount = Math.abs(transaction.amount);
   const sourceCurrency = transaction.currency;
-  
-  // Convert to MYR
+
   let myrAmount = absAmount;
   let rate = 1;
-  
+
   if (sourceCurrency !== 'MYR') {
     try {
       const conversion = await convertToMYR(client, absAmount, sourceCurrency);
@@ -79,16 +92,13 @@ async function parseStatementTransaction(
       rate = conversion.rate;
     } catch (error) {
       console.error(`Failed to convert ${absAmount} ${sourceCurrency} to MYR:`, error);
-      // Fall back to using original amount if conversion fails
       myrAmount = absAmount;
       rate = 0;
     }
   }
-  
-  // Generate composite ID from transaction content instead of using Wise transactionId
-  // This prevents duplicates when the same transaction appears in multiple balance statements
+
   const compositeId = generateCompositeId(date, merchant, myrAmount, 'MYR');
-  
+
   return {
     id: compositeId,
     wiseId: transaction.transactionId,
@@ -108,13 +118,12 @@ async function parseStatementTransaction(
 }
 
 export async function POST(request: NextRequest) {
-  const userId = await getUserIdFromRequest(request);
+  const userId = await getUserIdFromCookie(request);
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    // Fetch user's Wise token from their settings
     const userSettings = await db.query.settings.findFirst({
       where: and(eq(settings.id, 'app_settings'), eq(settings.userId, userId)),
     });
@@ -133,20 +142,17 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    
-    // Get personal profile
+
     const profiles = await client.getProfiles();
     console.log('Profiles returned:', JSON.stringify(profiles, null, 2));
-    
-    // Try to find personal profile, fallback to any profile
+
     let personalProfile = profiles.find(p => p.type?.toLowerCase() === 'personal');
-    
+
     if (!personalProfile && profiles.length > 0) {
-      // Use first available profile if no personal one found
       personalProfile = profiles[0];
       console.log('Using first available profile:', personalProfile.id);
     }
-    
+
     if (!personalProfile) {
       return NextResponse.json(
         { error: 'No profile found. Check your API token has correct permissions.' },
@@ -154,7 +160,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get balances for the profile
     const balances = await client.getBalances(personalProfile.id);
     console.log('Balances found:', balances.length);
     console.log('Balance details:', balances.map(b => ({ id: b.id, currency: b.currency, amount: b.amount, type: b.type })));
@@ -166,7 +171,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get transactions from last year
     const oneYearAgo = new Date();
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
@@ -187,7 +191,6 @@ export async function POST(request: NextRequest) {
       updatedAt: Date;
     }> = [];
 
-    // Fetch statements for each balance
     for (const balance of balances) {
       try {
         console.log(`Fetching statement for balance ${balance.id} (${balance.currency})...`);
@@ -198,9 +201,9 @@ export async function POST(request: NextRequest) {
           new Date()
         );
         console.log(`Found ${statementTransactions.length} transactions for balance ${balance.id}`);
-        
+
         const parsed = await Promise.all(
-          statementTransactions.map(t => 
+          statementTransactions.map(t =>
             parseStatementTransaction(client, t, personalProfile.id)
           )
         );
@@ -211,16 +214,13 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`Total transactions before deduplication: ${allTransactions.length}`);
-    
-    // Deduplicate by composite ID (timestamp + merchant + amount + currency)
-    // This handles cases where the same transaction appears in multiple balance statements
+
     const transactionMap = new Map<string, typeof allTransactions[0]>();
     for (const t of allTransactions) {
       const existing = transactionMap.get(t.id);
       if (!existing) {
         transactionMap.set(t.id, t);
       } else {
-        // Prefer transaction with better merchant name (not generic fallbacks)
         const isCurrentGeneric = t.merchant === 'Credit' || t.merchant === 'Transaction';
         const isExistingGeneric = existing.merchant === 'Credit' || existing.merchant === 'Transaction';
         if (!isCurrentGeneric && isExistingGeneric) {
@@ -236,27 +236,24 @@ export async function POST(request: NextRequest) {
     let skipped = 0;
 
     for (const transaction of deduplicatedTransactions) {
-      // Validate required fields
       if (!transaction.amount || isNaN(transaction.amount)) {
         console.warn(`Skipping transaction with invalid amount: ${transaction.id}`);
         continue;
       }
-      
-      // Check if transaction exists for this user
+
       const existing = await db.query.transactions.findFirst({
         where: and(eq(transactions.id, transaction.id), eq(transactions.userId, userId)),
       });
 
       if (existing) {
         if (isTransactionIdentical(existing, transaction)) {
-          // Record is identical — skip the write to preserve user-modified category
           skipped++;
         } else {
           await db.update(transactions)
             .set({
               ...transaction,
               profileId: existing.profileId,
-              category: existing.category, // Preserve existing category
+              category: existing.category,
               updatedAt: new Date(),
             })
             .where(and(eq(transactions.id, transaction.id), eq(transactions.userId, userId)));
