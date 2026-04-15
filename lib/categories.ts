@@ -1,6 +1,7 @@
 import { db } from './db';
 import { categories, type Category } from './schema';
 import { eq, and } from 'drizzle-orm';
+import { getOrCreateBudget } from './budgets';
 
 export async function getAllCategories(userId: string): Promise<Category[]> {
   return db.query.categories.findMany({
@@ -73,6 +74,13 @@ export async function updateCategoryDefaultBudget(
 
   if (!category) {
     throw new Error('Category not found');
+  }
+
+  // Create budget entry for current month if defaultBudget > 0
+  if (defaultBudget > 0) {
+    const now = new Date();
+    const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    await getOrCreateBudget(id, yearMonth, defaultBudget, userId);
   }
 
   return category;
