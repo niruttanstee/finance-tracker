@@ -64,11 +64,7 @@ export function TransactionList({
 
   const handleCategoryChange = async (transactionId: string, category: string | undefined) => {
     setUpdating(transactionId);
-    if (category === '__ignored__') {
-      await onIgnoreTransaction(transactionId, true);
-    } else {
-      await onCategoryChange(transactionId, category);
-    }
+    await onCategoryChange(transactionId, category);
     setUpdating(null);
   };
 
@@ -100,29 +96,11 @@ export function TransactionList({
                   {transaction.type === 'CREDIT' ? '+' : '-'}RM {transaction.amount.toFixed(2)}
                 </TableCell>
                 <TableCell>
-                  {transaction.ignored ? (
-                    <div className="flex items-center gap-2">
-                      <EyeOff className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">Ignored</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 text-xs"
-                        onClick={() => handleIgnore(transaction.id, false)}
-                        disabled={updating === transaction.id}
-                      >
-                        Undo
-                      </Button>
-                    </div>
-                  ) : (
+                  <div className="flex items-center gap-2">
                     <Select
                       value={transaction.category || 'uncategorized'}
                       onValueChange={(value) => {
-                        if (value === '__ignored__') {
-                          handleIgnore(transaction.id, true);
-                        } else {
-                          handleCategoryChange(transaction.id, value === 'uncategorized' ? undefined : value as string);
-                        }
+                        handleCategoryChange(transaction.id, value === 'uncategorized' ? undefined : value as string);
                       }}
                       disabled={updating === transaction.id}
                     >
@@ -139,10 +117,19 @@ export function TransactionList({
                             </div>
                           </SelectItem>
                         ))}
-                        <SelectItem value="__ignored__">Ignored</SelectItem>
                       </SelectContent>
                     </Select>
-                  )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={`h-8 w-8 ${transaction.ignored ? 'text-muted-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                      onClick={() => handleIgnore(transaction.id, !transaction.ignored)}
+                      disabled={updating === transaction.id}
+                      title={transaction.ignored ? 'Undo ignore' : 'Ignore transaction'}
+                    >
+                      <EyeOff className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             );
