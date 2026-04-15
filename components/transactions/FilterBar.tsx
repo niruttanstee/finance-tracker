@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { CalendarIcon, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Popover, PopoverPopup, PopoverPositioner, PopoverTrigger } from '@/components/ui/popover';
+import { Popover, PopoverPopup, PopoverPortal, PopoverPositioner, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import {
   Select,
@@ -82,17 +82,19 @@ export function FilterBar({ categories, filters, onFilterChange }: FilterBarProp
           <CalendarIcon className="mr-2 h-4 w-4" />
           {dateRangeDisplay}
         </PopoverTrigger>
-        <PopoverPositioner>
-          <PopoverPopup className="w-auto p-0">
-            <Calendar
-              mode="range"
-              selected={dateRange as { from: Date; to: Date } | undefined}
-              onSelect={handleDateRangeSelect}
-              numberOfMonths={2}
-              disabled={(date) => date > new Date()}
-            />
-          </PopoverPopup>
-        </PopoverPositioner>
+        <PopoverPortal>
+          <PopoverPositioner>
+            <PopoverPopup className="w-auto p-0">
+              <Calendar
+                mode="range"
+                selected={dateRange as { from: Date; to: Date } | undefined}
+                onSelect={handleDateRangeSelect}
+                numberOfMonths={2}
+                disabled={(date) => date > new Date()}
+              />
+            </PopoverPopup>
+          </PopoverPositioner>
+        </PopoverPortal>
       </Popover>
 
       <Select value={filters.category || 'all'} onValueChange={handleCategoryChange}>
