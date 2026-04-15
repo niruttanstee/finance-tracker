@@ -36,9 +36,12 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
         <div className="flex items-center justify-between h-14 px-4">
           {/* Left: Back button + Title */}
           <div className="flex items-center gap-4">
-            <button
+            <Button
+              variant="outline"
+              size="icon"
               onClick={() => router.push('/')}
-              className="flex items-center gap-2 text-sm font-medium text-orange-500 border border-orange-500 hover:bg-orange-50 px-3 py-1.5 rounded-md transition-colors"
+              className="text-orange-500 border-orange-500 hover:bg-orange-50"
+              aria-label="Back to launcher"
             >
               <svg
                 width="16"
@@ -52,8 +55,7 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
               >
                 <path d="M19 12H5M12 19l-7-7 7-7" />
               </svg>
-              Back
-            </button>
+            </Button>
             <span className="text-sm font-semibold">Finance</span>
           </div>
 
