@@ -41,7 +41,6 @@ export async function getTransactions(
   if (filters?.type) {
     conditions.push(eq(transactions.type, filters.type));
   }
-  conditions.push(eq(transactions.ignored, false));
 
   const whereClause = and(...conditions);
 
