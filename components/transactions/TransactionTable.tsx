@@ -25,7 +25,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { EyeOff } from 'lucide-react';
 
 type Transaction = {
   id: string;
