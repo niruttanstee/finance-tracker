@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "_comment": "Developer-specific overrides. Copy to settings.local.json (gitignored).",
+
+  "permissions": {
+    "_comment_permissions": "Pre-approved operations — no prompting needed",
+
+    "allow": [
+      "Bash(npm*)",
+      "Bash(npx*)",
+      "Bash(ps*)",
+      "Bash(kill*)",
+      "Bash(curl*)",
+      "Bash(grep*)",
+      "Bash(find*)",
+      "Bash(cat*)",
+      "Bash(ls*)",
+      "Bash(node*)",
+      "Bash(tsx*)",
+      "Bash(next*)",
+      "Bash(pkill*)",
+      "Bash(port*)",
+      "Glob(*.ts)",
+      "Glob(*.tsx)",
+      "Glob(*.json)",
+      "Glob(*.md)",
+      "Grep(*.ts)",
+      "Grep(*.tsx)",
+      "Read(*.ts)",
+      "Read(*.tsx)",
+      "Read(*.json)",
+      "Read(*.md)",
+      "Write(*.ts)",
+      "Write(*.tsx)",
+      "Write(*.json)",
+      "Write(*.md)"
+    ],
+    "ask": ["Bash(git*)"],
+    "deny": []
+  }
+}

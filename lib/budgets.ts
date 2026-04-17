@@ -313,15 +313,41 @@ export async function getBudgetsWithSpending(
 
   for (const cat of allCategories) {
     const budget = budgetMap.get(cat.id);
-    if (!budget || budget.monthlyLimit <= 0) continue;
+
+    // Calculate rollover from previous month
+    const rolloverAmount = await calculateRolloverAmount(cat.id, cat.name, yearMonth, userId);
+
+    // If no budget entry but category has defaultBudget, compute effective monthlyLimit
+    if (!budget || budget.monthlyLimit <= 0) {
+      if (cat.defaultBudget <= 0) continue;
+
+      const monthlyLimit = cat.defaultBudget + rolloverAmount;
+      const spent = spendingMap.get(cat.name) || 0;
+      const remaining = Math.max(0, monthlyLimit - spent);
+      const overspent = spent > monthlyLimit;
+      const savedAmount = spent < monthlyLimit ? monthlyLimit - spent : 0;
+
+      result.push({
+        categoryId: cat.id,
+        categoryName: cat.name,
+        categoryColor: cat.color,
+        monthlyLimit,
+        baseBudget: cat.defaultBudget,
+        rolloverAmount,
+        spent,
+        remaining,
+        overspent,
+        savedAmount,
+        noRollover: cat.noRollover || false,
+      });
+      continue;
+    }
 
     const spent = spendingMap.get(cat.name) || 0;
     const remaining = Math.max(0, budget.monthlyLimit - spent);
     const overspent = spent > budget.monthlyLimit;
     const savedAmount = spent < budget.monthlyLimit ? budget.monthlyLimit - spent : 0;
 
-    // Calculate rollover from previous month
-    const rolloverAmount = await calculateRolloverAmount(cat.id, cat.name, yearMonth, userId);
     const baseBudget = budget.monthlyLimit - rolloverAmount;
 
     result.push({
