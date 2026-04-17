@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { EyeOff } from 'lucide-react';
 
 type Transaction = {
   id: string;
@@ -38,6 +39,7 @@ type Transaction = {
   exchangeRate: number | null;
   type: 'DEBIT' | 'CREDIT';
   category: string | undefined;
+  ignored: boolean;
 };
 
 interface Category {
@@ -50,6 +52,7 @@ interface TransactionTableProps {
   transactions: Transaction[];
   categories: Category[];
   onCategoryChange: (transactionId: string, category: string | undefined) => void;
+  onIgnoreTransaction: (transactionId: string, ignored: boolean) => void;
   sorting: SortingState;
   onSortingChange: OnChangeFn<SortingState>;
 }
@@ -58,6 +61,7 @@ export function TransactionTable({
   transactions,
   categories,
   onCategoryChange,
+  onIgnoreTransaction,
   sorting,
   onSortingChange,
 }: TransactionTableProps) {
@@ -67,6 +71,12 @@ export function TransactionTable({
     transactionId: string,
     value: string | null
   ) => {
+    if (value === '__ignored__') {
+      setUpdating(transactionId);
+      await onIgnoreTransaction(transactionId, true);
+      setUpdating(null);
+      return;
+    }
     setUpdating(transactionId);
     await onCategoryChange(
       transactionId,
@@ -117,31 +127,42 @@ export function TransactionTable({
     {
       accessorKey: 'category',
       header: 'Category',
-      cell: ({ row }) => (
-        <Select
-          value={row.original.category || 'uncategorized'}
-          onValueChange={(value) => handleCategoryChange(row.original.id, value)}
-          disabled={updating === row.original.id}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="uncategorized">Uncategorized</SelectItem>
-            {categories.map((category) => (
-              <SelectItem key={category.id} value={category.name}>
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: category.color }}
-                  />
-                  {category.name}
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ),
+      cell: ({ row }) => {
+        if (row.original.ignored) {
+          return (
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <EyeOff className="h-4 w-4" />
+              <span className="text-sm">Ignored</span>
+            </div>
+          );
+        }
+        return (
+          <Select
+            value={row.original.category || 'uncategorized'}
+            onValueChange={(value) => handleCategoryChange(row.original.id, value)}
+            disabled={updating === row.original.id}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="uncategorized">Uncategorized</SelectItem>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.name}>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: category.color }}
+                    />
+                    {category.name}
+                  </div>
+                </SelectItem>
+              ))}
+              <SelectItem value="__ignored__">Ignored</SelectItem>
+            </SelectContent>
+          </Select>
+        );
+      },
     },
   ];
 
@@ -174,7 +195,7 @@ export function TransactionTable({
         </TableHeader>
         <TableBody>
           {table.getRowModel().rows.map((row) => (
-            <TableRow key={row.id}>
+            <TableRow key={row.id} className={row.original.ignored ? 'opacity-50' : ''}>
               {row.getVisibleCells().map((cell) => (
                 <TableCell key={cell.id}>
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
