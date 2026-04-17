@@ -1,7 +1,7 @@
 // app/page.tsx — Launcher homepage
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { platformApps } from '@/lib/platform/apps';
 import { FinanceIconWrapper } from '@/components/platform/icons/FinanceIconWrapper';
 
@@ -26,15 +26,7 @@ export default function LauncherPage() {
   const [authenticated, setAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Check if already authenticated via cookie
-    fetch('/api/auth/me')
-      .then(res => res.ok ? setAuthenticated(true) : showLogin())
-      .catch(() => showLogin())
-      .finally(() => setLoading(false));
-  }, []);
-
-  function showLogin() {
+  const showLogin = useCallback(() => {
     const username = window.prompt('Username:');
     if (!username) return;
     const password = window.prompt('Password:');
@@ -50,7 +42,15 @@ export default function LauncherPage() {
         showLogin();
       }
     });
-  }
+  }, []);
+
+  useEffect(() => {
+    // Check if already authenticated via cookie
+    fetch('/api/auth/me')
+      .then(res => res.ok ? setAuthenticated(true) : showLogin())
+      .catch(() => showLogin())
+      .finally(() => setLoading(false));
+  }, [showLogin]);
 
   if (loading) {
     return (
