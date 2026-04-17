@@ -128,42 +128,32 @@ export function TransactionTable({
     {
       accessorKey: 'category',
       header: 'Category',
-      cell: ({ row }) => {
-        if (row.original.ignored) {
-          return (
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <EyeOff className="h-4 w-4" />
-              <span className="text-sm">Ignored</span>
-            </div>
-          );
-        }
-        return (
-          <Select
-            value={row.original.category || 'uncategorized'}
-            onValueChange={(value) => handleCategoryChange(row.original.id, value)}
-            disabled={updating === row.original.id}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="uncategorized">Uncategorized</SelectItem>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={category.name}>
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: category.color }}
-                    />
-                    {category.name}
-                  </div>
-                </SelectItem>
-              ))}
-              <SelectItem value="__ignored__">Ignored</SelectItem>
-            </SelectContent>
-          </Select>
-        );
-      },
+      cell: ({ row }) => (
+        <Select
+          value={row.original.ignored ? '__ignored__' : (row.original.category || 'uncategorized')}
+          onValueChange={(value) => handleCategoryChange(row.original.id, value)}
+          disabled={updating === row.original.id}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Select category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="uncategorized">Uncategorized</SelectItem>
+            {categories.map((category) => (
+              <SelectItem key={category.id} value={category.name}>
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: category.color }}
+                  />
+                  {category.name}
+                </div>
+              </SelectItem>
+            ))}
+            <SelectItem value="__ignored__">Ignored</SelectItem>
+          </SelectContent>
+        </Select>
+      ),
     },
   ];
 

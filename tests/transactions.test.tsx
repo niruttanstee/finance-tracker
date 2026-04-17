@@ -109,7 +109,7 @@ describe('TransactionTable - ignore feature', () => {
     // but jsdom's className getter may not reflect dynamically computed conditional classes
   });
 
-  it('shows Ignored badge instead of select for ignored transactions', () => {
+  it('shows category select for ignored transactions (not a badge)', () => {
     const transactions = [createMockTransaction({ ignored: true })];
 
     render(
@@ -123,9 +123,7 @@ describe('TransactionTable - ignore feature', () => {
       />
     );
 
-    // Should show "Ignored" badge
-    expect(screen.getByText('Ignored')).toBeInTheDocument();
-    // Should NOT show a select dropdown
-    expect(screen.queryByRole('combobox')).toBeNull();
+    // Should show a select dropdown (not a badge)
+    expect(screen.queryByRole('combobox')).toBeInTheDocument();
   });
 });
