@@ -71,17 +71,18 @@ export function TransactionTable({
     transactionId: string,
     value: string | null
   ) => {
-    if (value === '__ignored__') {
-      setUpdating(transactionId);
-      await onIgnoreTransaction(transactionId, true);
-      setUpdating(null);
-      return;
-    }
     setUpdating(transactionId);
-    await onCategoryChange(
-      transactionId,
-      !value || value === 'uncategorized' ? undefined : value
-    );
+
+    if (value === '__ignored__') {
+      await onIgnoreTransaction(transactionId, true);
+    } else {
+      await onCategoryChange(
+        transactionId,
+        !value || value === 'uncategorized' ? undefined : value
+      );
+      await onIgnoreTransaction(transactionId, false);
+    }
+
     setUpdating(null);
   };
 
